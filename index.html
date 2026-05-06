@@ -11,7 +11,7 @@
         p { color: #666; font-size: 14px; margin-bottom: 30px; line-height: 1.6; }
         .btn { padding: 12px 24px; font-size: 16px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: background 0.2s; }
         .btn:hover { background-color: #357ae8; }
-        .status-card { background: #e8f0fe; color: #1967d2; padding: 15px; border-radius: 6px; margin-top: 20px; font-weight: bold; display: none; }
+        .status-card { background: #e8f0fe; color: #1967d2; padding: 15px; border-radius: 6px; margin-top: 20px; font-weight: bold; display: none; line-height: 1.6; }
         .error-card { background: #fce8e6; color: #c5221f; padding: 15px; border-radius: 6px; margin-top: 20px; font-weight: bold; display: none; }
         .loading-spinner { border: 4px solid rgba(0,0,0,0.1); width: 24px; height: 24px; border-radius: 50%; border-left-color: #4285F4; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -36,9 +36,8 @@
 </div>
 
 <script>
-    // ================= 【超重要】ここにあなたのクライアントIDを貼り付けてください =================
+    // クライアントIDは貼ってくれたものをそのままセットしてあります！
     const CLIENT_ID = "228515909111-oedvocakrjt69jaj7lj9bd75oea68ovb.apps.googleusercontent.com";
-    // ==========================================================================================
 
     const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
     
@@ -62,7 +61,7 @@
                 }
                 accessToken = tokenResponse.access_token;
                 
-                // 認証が成功したら、2回目チェックを行う
+                // 認証成功したら既存チェックへ
                 proceedAfterAuth();
             },
         });
@@ -76,24 +75,21 @@
         }
     }
 
-    // ログイン後に新規作成か既存利用かを判定する
     function proceedAfterAuth() {
         const savedSheetId = localStorage.getItem("user_spreadsheet_id");
 
         if (savedSheetId) {
-            // 【2回目以降】すでにローカルストレージにIDがあれば作成をスキップ
             showStatus(`🎉 おかえりなさい！<br>以前作成したスプレッドシート（ID: ${savedSheetId}）に接続しました。`);
             console.log("既存のシートを使用します。ID:", savedSheetId);
         } else {
-            // 【初めてのログイン】シートを新規作成する
             createAutomatedSpreadsheet();
         }
     }
 
-    // スプレッドシートを新規作成し、ヘッダー（座標列つき）を書き込む
     function createAutomatedSpreadsheet() {
         showStatus("<div class='loading-spinner'></div> カレンダー専用のシートを新規作成中...");
 
+        // 1. スプレッドシートを新規作成
         fetch("https://sheets.googleapis.com/v4/spreadsheets", {
             method: "POST",
             headers: {
@@ -118,32 +114,27 @@
             
             showStatus("<div class='loading-spinner'></div> シート作成成功！初期項目（座標列つき）を入力中...");
 
-            // 【修正ポイント】コロンをスラッシュに修正 ＆ 座標用の「x」「y」をヘッダーに追加！
-              // 【修正ポイント】コロンをスラッシュに修正 ＆ 座標用の「x」「y」をヘッダーに追加！
-            fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A1:F1/append?valueInputOption=USER_ENTERED`, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                    "Content-Type": "application/json"
-                },
+            // 2. 正しいURLとデータ構造でヘッダー(x, y含む)を書き込み
+            const range = encodeURIComponent("Sheet1!A1");
+            fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${accessToken}`,
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    // x と y も初期項目として1行目に書き込む
+                    majorDimension: "ROWS",
                     values: [["id", "date", "title", "description", "x", "y"]]
                 })
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) {
-                    showError("ヘッダーの入力に失敗しました: " + data.error.message);
-                    return;
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(err => { throw new Error(err.error.message); });
                 }
-
-                // すべての書き込みが完全に終わってから、最後にIDをローカルに保存する！
+                return res.json();
+            })
+            .then(data => {
+                // すべて完了したらローカルストレージに保存
                 localStorage.setItem("user_spreadsheet_id", spreadsheetId);
                 localStorage.setItem("user_spreadsheet_url", spreadsheetUrl);
 
@@ -151,7 +142,7 @@
                 console.log("作成されたシートのURL:", spreadsheetUrl);
             })
             .catch(err => {
-                showError("ヘッダー通信エラー: " + err.toString());
+                showError("ヘッダー入力エラー: " + err.message);
             });
         })
         .catch(err => {

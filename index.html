@@ -2,92 +2,166 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>安心スプレッドシート カレンダー</title>
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
     <style>
         body { margin: 40px; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fb; color: #333; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h2 { text-align: center; margin-bottom: 30px; color: #2c3e50; }
-        .setup-area { background: #f8f9fa; padding: 20px; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e9ecef; }
-        .setup-area p { margin-top: 0; font-size: 14px; color: #666; }
-        .input-group { display: flex; gap: 10px; }
-        input[type="text"] { flex: 1; padding: 10px; font-size: 14px; border: 1px solid #ced4da; border-radius: 4px; }
-        .btn { padding: 10px 20px; font-size: 14px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn:hover { background-color: #0056b3; }
-        #calendar { margin-top: 20px; }
+        .container { max-width: 600px; margin: 50px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; }
+        h2 { color: #2c3e50; margin-bottom: 10px; }
+        p { color: #666; font-size: 14px; margin-bottom: 30px; line-height: 1.6; }
+        .btn { padding: 12px 24px; font-size: 16px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: background 0.2s; }
+        .btn:hover { background-color: #357ae8; }
+        .status-card { background: #e8f0fe; color: #1967d2; padding: 15px; border-radius: 6px; margin-top: 20px; font-weight: bold; display: none; }
+        .error-card { background: #fce8e6; color: #c5221f; padding: 15px; border-radius: 6px; margin-top: 20px; font-weight: bold; display: none; }
+        .loading-spinner { border: 4px solid rgba(0,0,0,0.1); width: 24px; height: 24px; border-radius: 50%; border-left-color: #4285F4; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
 <div class="container">
     <h2>マイ・スマートカレンダー</h2>
+    <p>
+        データはあなた自身のGoogleスプレッドシートに安全に保管されます。<br>
+        下のボタンからGoogleアカウントと連携して、初期設定を完了させてください。
+    </p>
 
-    <div class="setup-area">
-        <p><strong>【初期設定】</strong> Googleドライブで新規スプレッドシート（空のままでOK）を作成し、そのURLを以下に貼り付けて同期してください。</p>
-        <div class="input-group">
-            <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/.../edit">
-            <button class="btn" onclick="syncCalendar()">カレンダーを同期</button>
-        </div>
-    </div>
+    <button id="authBtn" class="btn" onclick="handleAuthClick()">
+        <span>Google アカウントで連携</span>
+    </button>
 
-    <div id="calendar"></div>
+    <div id="statusArea" class="status-card"></div>
+    <div id="errorArea" class="error-card"></div>
 </div>
 
 <script>
-    // 【重要】ここにステップ1でメモした、新しい「GASのウェブアプリURL」を貼り付けてください！
-    const GAS_URL = "ここにあなたの最新のGASのURLを貼り付ける";
+    // ================= 【超重要】ここにあなたのクライアントIDを貼り付けてください =================
+    const CLIENT_ID = "228515909111-oedvocakrjt69jaj7lj9bd75oea68ovb.apps.googleusercontent.com";
+    // ==========================================================================================
 
-    // 画面が読み込まれたらカレンダーを起動
-    document.addEventListener('DOMContentLoaded', function() {
-        // 過去に保存したURLがあれば自動入力する
-        const savedUrl = localStorage.getItem('saved_sheet_url');
-        if (savedUrl) {
-            document.getElementById('sheetUrl').value = savedUrl;
+    // 使用する権限（スプレッドシートの閲覧・作成・編集権限だけに極限まで絞る！）
+    const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+    
+    let tokenClient;
+    let accessToken = null;
+
+    // 画面読み込み時にGoogleの認証クライアントを初期化
+    window.onload = function() {
+        if (CLIENT_ID.includes("ここにあなたの")) {
+            showError("コード内の CLIENT_ID をあなたのものに書き換えてください！");
+            document.getElementById("authBtn").disabled = true;
+            return;
         }
 
-        var calendarEl = document.getElementById('calendar');
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            locale: 'ja'
+        // ログイン処理を裏で準備するGoogle公式の命令
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: (tokenResponse) => {
+                if (tokenResponse.error !== undefined) {
+                    showError("認証に失敗しました: " + tokenResponse.error);
+                    return;
+                }
+                // 合鍵（アクセストークン）の取得に成功！
+                accessToken = tokenResponse.access_token;
+                showStatus("Google認証成功！スプレッドシートを作成中...");
+                
+                // 認証が通ったので、そのままスプレッドシート自動生成へ進む
+                createAutomatedSpreadsheet();
+            },
         });
-        calendar.render();
-    });
+    };
 
-    // 同期ボタンを押したときの処理
-    function syncCalendar() {
-        const urlInput = document.getElementById('sheetUrl').value.trim();
-        
-        if (!urlInput) {
-            alert("スプレッドシートのURLを入力してください。");
-            return;
+    // ボタンが押された時の処理
+    function handleAuthClick() {
+        // すでにトークンがある場合は再ログインさせずに進む
+        if (accessToken === null) {
+            // Google公式のログインポップアップを開く
+            tokenClient.requestAccessToken({ prompt: 'consent' });
+        } else {
+            createAutomatedSpreadsheet();
         }
-        if (GAS_URL.includes("ここにあなたの最新のGAS")){
-            alert("コード内のGAS_URLを書き換えてください！");
-            return;
-        }
+    }
 
-        // ユーザーに安心してもらうための普通のポップアップ
-        alert("Googleと接続し、シートの初期設定（id, date, title等の自動入力）を行います。");
+    // ユーザーのドライブにスプレッドシートを自動生成する関数
+    function createAutomatedSpreadsheet() {
+        showStatus("<div class='loading-spinner'></div> カレンダー専用のシートを新規作成中...");
 
-        // GASへ通信（URLをパラメーターとして乗せる）
-        // window.openではなく、fetch（裏側通信）で一瞬で終わらせます！
-        fetch(`${GAS_URL}?url=${encodeURIComponent(urlInput)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "success") {
-                // 次回から入力しなくていいように、ブラウザにURLを記憶させる
-                localStorage.setItem('saved_sheet_url', urlInput);
-                alert("同期大成功！スプレッドシートに項目が自動入力されました。カレンダーをご利用いただけます。");
-            } else {
-                alert("エラーが発生しました:\n" + data.message);
-            }
+        // Google Sheets API の「スプレッドシート新規作成」の窓口にリクエストを送る
+        fetch("https://sheets.googleapis.com/v4/spreadsheets", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${accessToken}`, // 手に入れた合鍵をここに添える
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                properties: {
+                    title: "マイ・スマートカレンダー・データベース" // 新しく作られるファイル名
+                }
+            })
         })
-        .catch(error => {
-            console.error("Error:", error);
-            alert("通信エラーが発生しました。GASの公開設定を確認してください。");
+        .then(response => response.json())
+        .then(spreadsheet => {
+            if (spreadsheet.error) {
+                showError("シートの作成に失敗しました: " + spreadsheet.error.message);
+                return;
+            }
+
+            const spreadsheetId = spreadsheet.spreadsheetId;
+            const spreadsheetUrl = spreadsheet.spreadsheetUrl;
+            
+            showStatus("<div class='loading-spinner'></div> シートの作成成功！初期項目(ヘッダー)を入力中...");
+
+            // 作ったシートの1行目に「id, date, title, description」を自動入力する
+            fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A1:D1:append?valueInputOption=USER_ENTERED`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    values: [["id", "date", "title", "description"]] // ヘッダー行のデータ
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showError("ヘッダーの入力に失敗しました: " + data.error.message);
+                    return;
+                }
+
+                // ブラウザに作ったシートの情報を記憶させ、次回からスキップできるようにする
+                localStorage.setItem("user_spreadsheet_id", spreadsheetId);
+                localStorage.setItem("user_spreadsheet_url", spreadsheetUrl);
+
+                showStatus(`🎉 初期設定がすべて完了しました！<br><br>あなたのGoogleドライブに「マイ・スマートカレンダー・データベース」というスプレッドシートが作られ、項目が自動設定されました！`);
+                
+                // 成功したら、作成されたスプレッドシートのURLをログに出す（または別タブで開くなど可能）
+                console.log("作成されたシートのURL:", spreadsheetUrl);
+            });
+        })
+        .catch(err => {
+            showError("通信エラーが発生しました: " + err.toString());
         });
+    }
+
+    // メッセージ表示用の便利関数
+    function showStatus(msg) {
+        const area = document.getElementById("statusArea");
+        const errArea = document.getElementById("errorArea");
+        errArea.style.display = "none";
+        area.style.display = "block";
+        area.innerHTML = msg;
+    }
+
+    function showError(msg) {
+        const area = document.getElementById("errorArea");
+        const statusArea = document.getElementById("statusArea");
+        statusArea.style.display = "none";
+        area.style.display = "block";
+        area.innerText = msg;
     }
 </script>
 </body>
-</html>
 </html>

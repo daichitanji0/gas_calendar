@@ -7,17 +7,18 @@
     <style>
         body { margin: 40px; font-family: sans-serif; }
         #calendar { max-width: 900px; margin: 0 auto; }
-        .setup-btn { display: block; margin: 20px auto; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        .setup-btn { display: block; margin: 20px auto; padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 4px; }
+        .setup-btn:hover { background-color: #45a049; }
     </style>
 </head>
 <body>
 
     <h2 style="text-align: center;">マイ・カレンダー（GAS連携テスト）</h2>
-    <button class="setup-btn" onclick="startSetup()">初期セットアップ（ドライブにシート作成）</button>
+    <button class="setup-btn" onclick="startSetup()">Googleアカウントでログインして初期セットアップ</button>
     <div id="calendar"></div>
 
     <script>
-        // 【重要】ここにステップ2でメモした「GASのウェブアプリURL」を貼り付けてください！
+        // 【最重要】ここにあなたの最新の「GASのウェブアプリURL」を貼り付けてください！
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzQCR8Oe8I0SK0f13vkaBr4ozv7FBSxjnBJqN_IfSx4wh2Mho1dY3Ow85GA1zmgGCic/exec";
 
         // 画面が読み込まれたら、カレンダーを起動する
@@ -30,26 +31,18 @@
             calendar.render();
         });
 
-        // ボタンを押したときにGASを呼び出す関数
+        // ボタンを押したときに動作する関数
         function startSetup() {
             if(GAS_URL.includes("ここにあなたのGAS")){
                 alert("コード内のGAS_URLをあなたのURLに書き換えてください！");
                 return;
             }
-            alert("Googleへの接続を開始します。次の画面で警告が出ますが、許可して進んでください。");
             
-            // GASのdoGet(e)を呼び出して、利用者のドライブにスプレッドシートを作らせる
-            fetch(GAS_URL)
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);
-                alert("大成功！利用者のGoogleドライブにスプレッドシートが作られました！\nURL: " + data.spreadsheetUrl);
-            })
-            .catch(error => {
-                console.error("エラーが発生しました:", error);
-                alert("通信エラーが発生しました。GASの公開設定やCORSの設定を確認してください。");
-            });
+            // 【修正の肝】裏側で通信するのではなく、新しいウィンドウで直接GASのURLを開く！
+            // これにより、Google公式のログイン・権限承認画面が確実に立ち上がります。
+            window.open(GAS_URL, "GoogleLogin", "width=600,height=600,menubar=no,toolbar=no");
         }
     </script>
 </body>
+</html>
 </html>

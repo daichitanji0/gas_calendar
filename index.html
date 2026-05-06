@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>安心スプレッドシート カレンダー</title>
     <style>
-        body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fb; color: #333; h-height: 100vh; }
+        body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fb; color: #333; height: 100vh; }
         
         /* 初期設定画面のスタイル */
         .setup-container { max-width: 600px; margin: 100px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; }
@@ -69,8 +69,7 @@
 <div id="mainApp">
     <div class="task-window" onclick="addNewTaskPrompt(event)">
         <h3>未配置のタスク (クリックで追加)</h3>
-        <div class="task-list" id="taskList">
-            </div>
+        <div class="task-list" id="taskList"></div>
     </div>
 
     <div class="calendar-window">
@@ -78,7 +77,7 @@
         <div class="calendar-grid" id="calendarGrid">
             <div class="weekday">日</div><div class="weekday">月</div><div class="weekday">火</div>
             <div class="weekday">水</div><div class="weekday">木</div><div class="weekday">金</div><div class="weekday">土</div>
-            </div>
+        </div>
     </div>
 </div>
 
@@ -88,9 +87,18 @@
     
     let tokenClient;
     let accessToken = null;
-    let taskIdCounter = 0; // タスク選別のための簡易ID
+    let taskIdCounter = 0;
 
+    // Googleスクリプトが読み込まれるのを安全に待つ初期化
     window.onload = function() {
+        if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
+            initGoogleAuth();
+        } else {
+            setTimeout(window.onload, 100);
+        }
+    };
+
+    function initGoogleAuth() {
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: SCOPES,
@@ -103,9 +111,12 @@
                 proceedAfterAuth();
             },
         });
-    };
+    }
 
     function handleAuthClick() {
+        if (!tokenClient) {
+            initGoogleAuth();
+        }
         if (accessToken === null) {
             tokenClient.requestAccessToken({ prompt: 'consent' });
         } else {
@@ -116,64 +127,29 @@
     function proceedAfterAuth() {
         const savedSheetId = localStorage.getItem("user_spreadsheet_id");
         if (savedSheetId) {
-            // 既にシートがあれば即座にカレンダー画面を起動！
             initCalendarApp();
         } else {
             createAutomatedSpreadsheet();
         }
     }
 
-    // カレンダー画面を起動する関数
     function initCalendarApp() {
         document.getElementById("setupScreen").style.display = "none";
         const app = document.getElementById("mainApp");
-        app.style.display = "flex"; // 左右並びのレイアウトを有効化
-        
+        app.style.display = "flex"; 
         generateMayCalendar();
     }
 
-    // 2026年5月のカレンダーを自動生成する関数
     function generateMayCalendar() {
         const grid = document.getElementById("calendarGrid");
         
-        // 2026年5月1日は「金曜日」なので、日〜木までの5マス分を空マス（empty）で埋める
+        // 2026年5月1日は金曜日
         for (let i = 0; i < 5; i++) {
             const emptyCell = document.createElement("div");
             emptyCell.className = "calendar-day empty";
             grid.appendChild(emptyCell);
         }
 
-        // 5月1日から31日までを生成
         for (let day = 1; day <= 31; day++) {
             const dayCell = document.createElement("div");
             dayCell.className = "calendar-day";
-            dayCell.dataset.date = `2026-05-${day.toString().padStart(2, '0')}`; // データ属性に日付を持たせる
-            
-            dayCell.innerHTML = `<span class="day-number">${day}</span>`;
-            
-            // --- ドラッグ＆ドロップされる側のイベントを設定 ---
-            dayCell.addEventListener("dragover", (e) => {
-                e.preventDefault(); // ドロップを許可するために必須
-                dayCell.classList.add("drag-over");
-            });
-
-            dayCell.addEventListener("dragleave", () => {
-                dayCell.classList.remove("drag-over");
-            });
-
-            dayCell.addEventListener("drop", (e) => {
-                e.preventDefault();
-                dayCell.classList.remove("drag-over");
-                
-                // ドラッグされたタスクのテキストを取得
-                const taskText = e.dataTransfer.getData("text/plain");
-                const elementId = e.dataTransfer.getData("elementId");
-                
-                // カレンダーのマスの中に予定を配置
-                const placedTask = document.createElement("div");
-                placedTask.className = "placed-task";
-                placedTask.innerText = taskText;
-                dayCell.appendChild(placedTask);
-                
-                // プールにあった元のタスク要素を削除
-                const

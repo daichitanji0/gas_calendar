@@ -115,8 +115,6 @@
             showStatus("<div class='loading-spinner'></div> シート作成成功！初期項目（座標列つき）を入力中...");
           showStatus("<div class='loading-spinner'></div> シート作成成功！初期項目（座標列つき）を入力中...");
 
-            // 2. 正しいURLとデータ構造でヘッダー(x, y含む)を書き込み
-            const range = encodeURIComponent("Sheet1!A1");
             // 【確定解決版】シート名（Sheet1など）に依存せず、1枚目のシートのA1マスを起点にする指定
             const range = encodeURIComponent("A1");
             

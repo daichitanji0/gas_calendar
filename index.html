@@ -7,10 +7,8 @@
     <style>
         body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fb; color: #333; height: 100vh; }
         
-        /* 初期設定画面のスタイル */
+        /* セットアップ画面 */
         .container { max-width: 600px; margin: 100px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; }
-        h2 { color: #2c3e50; margin-bottom: 10px; }
-        p { color: #666; font-size: 14px; margin-bottom: 30px; line-height: 1.6; }
         .btn { padding: 12px 24px; font-size: 16px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: background 0.2s; }
         .btn:hover { background-color: #357ae8; }
         .status-card { background: #e8f0fe; color: #1967d2; padding: 15px; border-radius: 6px; margin-top: 20px; font-weight: bold; display: none; line-height: 1.6; }
@@ -18,34 +16,19 @@
         .loading-spinner { border: 4px solid rgba(0,0,0,0.1); width: 24px; height: 24px; border-radius: 50%; border-left-color: #4285F4; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* メインアプリ画面（左右分割レイアウト） */
+        /* メインアプリ（1/3 と 2/3 分割） */
         #mainApp { display: none; height: 100vh; box-sizing: border-box; padding: 20px; gap: 20px; }
-        
-        /* 左側1/3：タスク管理ウィンドウ（最初はただの白い四角） */
         .task-window { width: 33.33%; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 20px; display: flex; flex-direction: column; box-sizing: border-box; cursor: pointer; }
-        .task-window h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #f0f4f8; padding-bottom: 10px; pointer-events: none; }
         .task-list { flex: 1; overflow-y: auto; padding: 10px 0; }
-        
-        /* ドラッグするタスクの見た目 */
-        .task-item { background: #e8f0fe; color: #1967d2; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-weight: bold; cursor: grab; border-left: 5px solid #4285F4; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .task-item:active { cursor: grabbing; }
+        .task-item { background: #e8f0fe; color: #1967d2; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-weight: bold; cursor: grab; border-left: 5px solid #4285F4; }
 
-        /* 右側2/3：すんごくシンプルな5月カレンダー */
         .calendar-window { width: 66.66%; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
-        .calendar-header { font-size: 24px; font-weight: bold; color: #2c3e50; text-align: center; margin-bottom: 20px; }
-        
-        /* カレンダーのグリッド配置（7列） */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; flex: 1; }
-        .weekday { text-align: center; font-weight: bold; color: #7f8c8d; padding-bottom: 5px; border-bottom: 1px solid #eee; }
-        
-        /* カレンダーの日付マス */
-        .calendar-day { background: #fdfefe; border: 1px solid #eef2f5; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; min-height: 90px; transition: background 0.2s; }
+        .calendar-day { background: #fdfefe; border: 1px solid #eef2f5; border-radius: 6px; padding: 8px; min-height: 90px; }
         .calendar-day.drag-over { background: #e8f0fe; border: 2px dashed #4285F4; }
-        .day-number { font-weight: bold; color: #555; margin-bottom: 5px; }
-        .calendar-day.empty { background: #f9fafb; border: none; }
-        
-        /* 日付マスの中にドロップされた予定の見た目 */
         .placed-task { background: #4285F4; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-top: 4px; font-weight: bold; }
+        .day-number { font-weight: bold; color: #555; }
+        .empty { background: #f9fafb; border: none; }
     </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -53,243 +36,175 @@
 
 <div id="setupScreen" class="container">
     <h2>マイ・スマートカレンダー</h2>
-    <p>
-        データはあなた自身のGoogleスプレッドシートに安全に保管されます。<br>
-        下のボタンからGoogleアカウントと連携して、初期設定を完了させてください。
-    </p>
-
-    <button id="authBtn" class="btn" onclick="handleAuthClick()">
-        <span>Google アカウントで連携</span>
-    </button>
-
+    <p>Googleドライブから既存のシートを自動検索して接続します。</p>
+    <button id="authBtn" class="btn" onclick="handleAuthClick()">Google アカウントで連携</button>
     <div id="statusArea" class="status-card"></div>
     <div id="errorArea" class="error-card"></div>
 </div>
 
 <div id="mainApp">
     <div class="task-window" onclick="addNewTaskPrompt(event)">
-        <h3>未配置のタスク (クリックで追加)</h3>
-        <div class="task-list" id="taskList">
-            </div>
+        <h3>未配置のタスク (+)</h3>
+        <div class="task-list" id="taskList"></div>
     </div>
-
     <div class="calendar-window">
-        <div class="calendar-header">2026年 5月</div>
+        <div style="font-size:24px; font-weight:bold; text-align:center; margin-bottom:20px;">2026年 5月</div>
         <div class="calendar-grid" id="calendarGrid">
-            <div class="weekday">日</div><div class="weekday">月</div><div class="weekday">火</div>
-            <div class="weekday">水</div><div class="weekday">木</div><div class="weekday">金</div><div class="weekday">土</div>
-            </div>
+            <div style="text-align:center;font-weight:bold;">日</div><div style="text-align:center;font-weight:bold;">月</div>
+            <div style="text-align:center;font-weight:bold;">火</div><div style="text-align:center;font-weight:bold;">水</div>
+            <div style="text-align:center;font-weight:bold;">木</div><div style="text-align:center;font-weight:bold;">金</div>
+            <div style="text-align:center;font-weight:bold;">土</div>
+        </div>
     </div>
 </div>
 
 <script>
     const CLIENT_ID = "228515909111-oedvocakrjt69jaj7lj9bd75oea68ovb.apps.googleusercontent.com";
-    const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
-    
+    // 権限に Drive Metadata (検索用) を追加しました！
+    const SCOPES = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly";
+    const DB_FILE_NAME = "マイ-スマートカレンダー-データベース";
+
     let tokenClient;
     let accessToken = null;
-    let taskIdCounter = 0; // タスク判別のためのID
+    let spreadsheetId = null;
 
-    window.onload = function() {
+    window.onload = () => {
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: SCOPES,
-            callback: (tokenResponse) => {
-                if (tokenResponse.error !== undefined) {
-                    showError("認証に失敗しました: " + tokenResponse.error);
-                    return;
-                }
-                accessToken = tokenResponse.access_token;
-                proceedAfterAuth();
+            callback: (res) => {
+                if (res.error) return showError("認証エラー: " + res.error);
+                accessToken = res.access_token;
+                findOrCreateSpreadsheet();
             },
         });
     };
 
     function handleAuthClick() {
-        if (accessToken === null) {
-            tokenClient.requestAccessToken({ prompt: 'consent' });
-        } else {
-            proceedAfterAuth();
-        }
+        tokenClient.requestAccessToken({ prompt: 'consent' });
     }
 
-    function proceedAfterAuth() {
-        const savedSheetId = localStorage.getItem("user_spreadsheet_id");
-        if (savedSheetId) {
-            // 既にシートがあれば即座にカレンダー画面を起動！
-            initCalendarApp();
-        } else {
-            createAutomatedSpreadsheet();
-        }
+    // --- 機能1: ドライブから既存シートを自動検索 ---
+    function findOrCreateSpreadsheet() {
+        showStatus("<div class='loading-spinner'></div> ドライブから専用シートを探しています...");
+        
+        const q = encodeURIComponent(`name = '${DB_FILE_NAME}' and trashed = false`);
+        fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, {
+            headers: { "Authorization": `Bearer ${accessToken}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.files && data.files.length > 0) {
+                // 見つかった！
+                spreadsheetId = data.files[0].id;
+                console.log("既存シートを発見:", spreadsheetId);
+                initCalendarApp();
+            } else {
+                // 見つからないので新しく作る
+                createNewSpreadsheet();
+            }
+        })
+        .catch(err => showError("検索エラー: " + err));
     }
 
-    // カレンダーアプリ画面を起動する関数
+    function createNewSpreadsheet() {
+        showStatus("<div class='loading-spinner'></div> 新しいシートを作成中...");
+        fetch("https://sheets.googleapis.com/v4/spreadsheets", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ properties: { title: DB_FILE_NAME } })
+        })
+        .then(res => res.json())
+        .then(data => {
+            spreadsheetId = data.spreadsheetId;
+            // ヘッダー書き込み
+            fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ values: [["id", "date", "title", "description", "x", "y"]] })
+            }).then(() => initCalendarApp());
+        });
+    }
+
     function initCalendarApp() {
         document.getElementById("setupScreen").style.display = "none";
-        const app = document.getElementById("mainApp");
-        app.style.display = "flex"; // 左右並びのレイアウトを有効化
-        
+        document.getElementById("mainApp").style.display = "flex";
         generateMayCalendar();
     }
 
-    // 2026年5月のカレンダーを自動生成する関数
     function generateMayCalendar() {
         const grid = document.getElementById("calendarGrid");
-        
-        // 2026年5月1日は「金曜日」なので、日〜木までの5マス分を空マス（empty）で埋める
-        for (let i = 0; i < 5; i++) {
-            const emptyCell = document.createElement("div");
-            emptyCell.className = "calendar-day empty";
-            grid.appendChild(emptyCell);
-        }
+        for (let i = 0; i < 5; i++) grid.appendChild(createCell(true));
+        for (let d = 1; d <= 31; d++) grid.appendChild(createCell(false, d));
+    }
 
-        // 5月1日から31日までを生成
-        for (let day = 1; day <= 31; day++) {
-            const dayCell = document.createElement("div");
-            dayCell.className = "calendar-day";
-            dayCell.dataset.date = `2026-05-${day.toString().padStart(2, '0')}`; // データ属性に日付を持たせる
-            dayCell.innerHTML = `<span class="day-number">${day}</span>`;
-            
-            // --- ドラッグ＆ドロップされる側（マス）のイベントを設定 ---
-            dayCell.addEventListener("dragover", (e) => {
-                e.preventDefault(); // ドロップを許可するために必須
-                dayCell.classList.add("drag-over");
-            });
-
-            dayCell.addEventListener("dragleave", () => {
-                dayCell.classList.remove("drag-over");
-            });
-
-            dayCell.addEventListener("drop", (e) => {
+    function createCell(isEmpty, day) {
+        const div = document.createElement("div");
+        div.className = isEmpty ? "calendar-day empty" : "calendar-day";
+        if (!isEmpty) {
+            div.innerHTML = `<span class="day-number">${day}</span>`;
+            div.dataset.date = `2026-05-${day.toString().padStart(2, '0')}`;
+            div.ondragover = (e) => { e.preventDefault(); div.classList.add("drag-over"); };
+            div.ondragleave = () => div.classList.remove("drag-over");
+            div.ondrop = (e) => {
                 e.preventDefault();
-                dayCell.classList.remove("drag-over");
-                
-                // ドラッグされたタスクの情報を取得
-                const taskText = e.dataTransfer.getData("text/plain");
+                div.classList.remove("drag-over");
+                const title = e.dataTransfer.getData("text/plain");
                 const elementId = e.dataTransfer.getData("elementId");
                 
-                if (!taskText) return;
+                // 画面に表示
+                const pt = document.createElement("div");
+                pt.className = "placed-task";
+                pt.innerText = title;
+                div.appendChild(pt);
+                document.getElementById(elementId).remove();
 
-                // カレンダーのマスの中に予定を配置
-                const placedTask = document.createElement("div");
-                placedTask.className = "placed-task";
-                placedTask.innerText = taskText;
-                dayCell.appendChild(placedTask);
-                
-                // プールにあった元のタスク要素を削除
-                const originalElement = document.getElementById(elementId);
-                if (originalElement) {
-                    originalElement.remove();
-                }
-
-                // 【ログ確認用】
-                console.log(`タスク「${taskText}」が ${dayCell.dataset.date} に配置されました`);
-            });
-
-            grid.appendChild(dayCell);
+                // --- 機能2: ドロップした瞬間にスプレッドシートに保存 ---
+                saveTaskToSheet(div.dataset.date, title);
+            };
         }
+        return div;
     }
 
-    // 左側のウィンドウをクリックしたときにリマインダー風に入力する関数
-    function addNewTaskPrompt(event) {
-        // タスク自体のドラッグ操作クリックの時はポップアップを開かないように制御
-        if (event.target.className === "task-item") return;
-
-        const taskText = prompt("追加する予定（タスク）を入力してください：");
-        if (!taskText || taskText.trim() === "") return;
-
-        taskIdCounter++;
-        const taskList = document.getElementById("taskList");
-        const taskItem = document.createElement("div");
-        taskItem.className = "task-item";
-        taskItem.draggable = true; // ドラッグ可能にするHTML5属性
-        taskItem.id = `task-${taskIdCounter}`;
-        taskItem.innerText = taskText;
-
-        // --- ドラッグする側（タスク）のイベントを設定 ---
-        taskItem.addEventListener("dragstart", (e) => {
-            e.dataTransfer.setData("text/plain", taskItem.innerText);
-            e.dataTransfer.setData("elementId", taskItem.id);
-        });
-
-        taskList.appendChild(taskItem);
-    }
-
-    // スプレッドシートを新規作成する関数
-    function createAutomatedSpreadsheet() {
-        showStatus("<div class='loading-spinner'></div> カレンダー専用のシートを新規作成中...");
-
-        fetch("https://sheets.googleapis.com/v4/spreadsheets", {
+    function saveTaskToSheet(date, title) {
+        console.log("保存中...", title);
+        const row = [Date.now(), date, title, "", 0, 0]; // ID, 日付, タイトル...
+        fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`, {
             method: "POST",
-            headers: {
-                "Authorization": `Bearer ${accessToken}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                properties: { title: "マイ-スマートカレンダー-データベース" }
-            })
+            headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ values: [row] })
         })
-        .then(response => response.json())
-        .then(spreadsheet => {
-            if (spreadsheet.error) {
-                showError("シートの作成に失敗しました: " + spreadsheet.error.message);
-                return;
-            }
+        .then(res => res.json())
+        .then(() => console.log("保存完了！"))
+        .catch(err => console.error("保存失敗:", err));
+    }
 
-            const spreadsheetId = spreadsheet.spreadsheetId;
-            const spreadsheetUrl = spreadsheet.spreadsheetUrl;
-            
-            showStatus("<div class='loading-spinner'></div> シート作成成功！初期項目（座標列つき）を入力中...");
-
-            const range = encodeURIComponent("A1");
-            
-            fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED`, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    majorDimension: "ROWS",
-                    values: [["id", "date", "title", "description", "x", "y"]]
-                })
-            })
-            .then(res => {
-                if (!res.ok) {
-                    return res.json().then(err => { throw new Error(err.error.message); });
-                }
-                return res.json();
-            })
-            .then(data => {
-                localStorage.setItem("user_spreadsheet_id", spreadsheetId);
-                localStorage.setItem("user_spreadsheet_url", spreadsheetUrl);
-
-                // 設定が全部終わったら、そのままカレンダー画面へ！
-                initCalendarApp();
-            })
-            .catch(err => {
-                showError("ヘッダー入力エラー: " + err.message);
-            });
-        })
-        .catch(err => {
-            showError("シート作成通信エラー: " + err.toString());
-        });
+    function addNewTaskPrompt(e) {
+        if (e.target.className === "task-item") return;
+        const text = prompt("予定を入力：");
+        if (!text) return;
+        const item = document.createElement("div");
+        item.className = "task-item";
+        item.draggable = true;
+        item.id = "t-" + Date.now();
+        item.innerText = text;
+        item.ondragstart = (ev) => {
+            ev.dataTransfer.setData("text/plain", item.innerText);
+            ev.dataTransfer.setData("elementId", item.id);
+        };
+        document.getElementById("taskList").appendChild(item);
     }
 
     function showStatus(msg) {
-        const area = document.getElementById("statusArea");
-        const errArea = document.getElementById("errorArea");
-        errArea.style.display = "none";
-        area.style.display = "block";
-        area.innerHTML = msg;
+        const s = document.getElementById("statusArea");
+        s.style.display = "block";
+        s.innerHTML = msg;
     }
 
     function showError(msg) {
-        const area = document.getElementById("errorArea");
-        const statusArea = document.getElementById("statusArea");
-        statusArea.style.display = "none";
-        area.style.display = "block";
-        area.innerText = msg;
+        const e = document.getElementById("errorArea");
+        e.style.display = "block";
+        e.innerText = msg;
     }
 </script>
 </body>

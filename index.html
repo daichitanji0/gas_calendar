@@ -59,8 +59,8 @@
 <script>
     const CLIENT_ID = "228515909111-oedvocakrjt69jaj7lj9bd75oea68ovb.apps.googleusercontent.com";
     
-    // スコープを変更：drive.readonlyからdrive.fileへ変更し、自身で作成したファイルに確実に戻れるようにする
-    const SCOPES = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
+    // スコープを変更：Driveのメタデータ検索（drive.metadata.readonly）とスプレッドシートの操作（spreadsheets）
+    const SCOPES = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly";
     const DB_FILE_NAME = "マイ-スマートカレンダー-データベース";
 
     let tokenClient;
@@ -74,7 +74,8 @@
             callback: (res) => {
                 if (res.error) return showError("認証エラー: " + res.error);
                 accessToken = res.access_token;
-                findOrCreateSpreadsheet();
+                // ログイン成功後、必ずドライブ内検索を実行する
+                searchDriveForSpreadsheet();
             },
         });
     };
@@ -83,20 +84,11 @@
         tokenClient.requestAccessToken(); 
     }
 
-    async function findOrCreateSpreadsheet() {
-        // キャッシュチェック
-        const cachedId = localStorage.getItem("saved_spreadsheet_id");
-        if (cachedId) {
-            // キャッシュがある場合、本当にそのファイルが存在するか一応シート取得でテストする事も可能ですが、
-            // 今回は一旦キャッシュを信じて進めます。
-            spreadsheetId = cachedId;
-            initCalendarApp();
-            return;
-        }
+    async function searchDriveForSpreadsheet() {
+        showStatus("<div class='loading-spinner'></div> ドライブ内を検索中...");
 
-        showStatus("<div class='loading-spinner'></div> ドライブ内をスキャン中...");
-
-        // 検索クエリ：同名ファイルが複数ある場合に備え、作成日時の新しい順(orderBy=createdTime desc)で取得
+        // キャッシュに頼らず、メタデータを使って確実に最新のファイルを検索する
+        // 同名ファイルが複数ある場合に備え、作成日時の新しい順(orderBy=createdTime desc)で取得
         const q = `name = '${DB_FILE_NAME}' and trashed = false and mimeType = 'application/vnd.google-apps.spreadsheet'`;
         const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name, createdTime)&orderBy=createdTime desc&spaces=drive`;
 
@@ -107,11 +99,12 @@
             const data = await response.json();
 
             if (data.files && data.files.length > 0) {
-                // 最新のファイルを正として採用する
+                // ドライブ内にファイルが見つかった場合、最新のファイルを採用
                 spreadsheetId = data.files[0].id;
                 localStorage.setItem("saved_spreadsheet_id", spreadsheetId);
                 initCalendarApp();
             } else {
+                // 検索で見つからなかった場合のみ新規作成の確認を行う
                 if (confirm("既存のシートが見つかりませんでした。\n（別ブラウザで作成直後の場合は、キャンセルして数秒後に再試行してください）\n\n新しく作成しますか？")) {
                     createNewSpreadsheet();
                 } else {
@@ -126,6 +119,7 @@
     async function createNewSpreadsheet() {
         showStatus("<div class='loading-spinner'></div> データベースを生成中...");
         try {
+            // スプレッドシートの新規作成 (spreadsheets スコープで実行可能)
             const res = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
                 method: "POST",
                 headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -135,6 +129,7 @@
             spreadsheetId = data.spreadsheetId;
             localStorage.setItem("saved_spreadsheet_id", spreadsheetId);
 
+            // ヘッダー行の追加
             await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`, {
                 method: "POST",
                 headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -161,6 +156,7 @@
             <div style="text-align:center;font-weight:bold;">木</div><div style="text-align:center;font-weight:bold;">金</div>
             <div style="text-align:center;font-weight:bold;">土</div>
         `;
+        // 2026年5月のカレンダー生成 (1日が金曜日スタート)
         for (let i = 0; i < 5; i++) grid.appendChild(createCell(true));
         for (let d = 1; d <= 31; d++) grid.appendChild(createCell(false, d));
     }

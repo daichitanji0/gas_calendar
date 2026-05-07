@@ -21,7 +21,7 @@
 
         .calendar-window { width: 66.66%; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; flex: 1; }
-        .calendar-day { background: #fdfefe; border: 1px solid #eef2f5; border-radius: 6px; padding: 8px; min-height: 90px; }
+        .calendar-day { background: #fdfefe; border: 1px solid #eef2f5; border-radius: 6px; padding: 8px; min-height: 90px; position: relative; }
         .calendar-day.drag-over { background: #e8f0fe; border: 2px dashed #4285F4; }
         .placed-task { background: #4285F4; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-top: 4px; font-weight: bold; }
         .day-number { font-weight: bold; color: #555; }
@@ -33,7 +33,7 @@
 
 <div id="setupScreen" class="container">
     <h2>マイ・スマートカレンダー</h2>
-    <p>Googleドライブと連携して、あなた専用のカレンダーを起動します。</p>
+    <p>Googleアカウントと安全に連携してカレンダーを起動します。</p>
     <button id="authBtn" class="btn" onclick="handleAuthClick()">Google アカウントで連携</button>
     <div id="statusArea" class="status-card"></div>
     <div id="errorArea" class="error-card"></div>
@@ -62,51 +62,60 @@
 
     let tokenClient;
     let accessToken = null;
-    let spreadsheetId = localStorage.getItem("my_calendar_sheet_id"); // ブラウザに保存されたIDを読み込む
+    let spreadsheetId = null;
 
     window.onload = () => {
+        // 1. TokenClientの初期化
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: SCOPES,
+            prompt: '', // 空にすることで、すでに許可済みの場合はポップアップをスキップ
             callback: (res) => {
                 if (res.error) return showError("認証エラー: " + res.error);
                 accessToken = res.access_token;
-                // IDを既に知っているなら検索をスキップ！
-                if (spreadsheetId) {
-                    initCalendarApp();
-                } else {
-                    findOrCreateSpreadsheet();
-                }
+                
+                // 認証成功したら、何はともあれ「まずGoogleドライブを検索」しに行く（最重要）
+                findOrCreateSpreadsheet();
             },
         });
+
+        // 【問題3解決】ページを開いた瞬間に、裏側で自動ログインを1回試みる
+        setTimeout(() => {
+            console.log("自動サイレントログインを試みます...");
+            tokenClient.requestAccessToken({ hint: 'auto' }); 
+        }, 500);
     };
 
     function handleAuthClick() {
-        // prompt: 'consent' を削除！これで2回目以降の許可画面をスキップします
+        // ボタンを手動で押した場合は、通常ログインを実行
         tokenClient.requestAccessToken(); 
     }
 
+    // --- 【問題1解決】ブラウザが違っても、必ず最初にドライブ内を検索する ---
     function findOrCreateSpreadsheet() {
-        showStatus("<div class='loading-spinner'></div> シートを確認中...");
-        const q = encodeURIComponent(`name = '${DB_FILE_NAME}' and trashed = false`);
+        showStatus("<div class='loading-spinner'></div> Googleドライブから専用シートを検索中...");
+        
+        const q = encodeURIComponent(`name = '${DB_FILE_NAME}' and trashed = false and mimeType = 'application/vnd.google-apps.spreadsheet'`);
         fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, {
             headers: { "Authorization": `Bearer ${accessToken}` }
         })
         .then(res => res.json())
         .then(data => {
             if (data.files && data.files.length > 0) {
+                // 過去に作られたシートを1番目に見つけたら、それを絶対に使用する！
                 spreadsheetId = data.files[0].id;
-                localStorage.setItem("my_calendar_sheet_id", spreadsheetId); // 見つけたIDをブラウザに記憶
+                console.log("既存のシートを再発見・接続しました:", spreadsheetId);
                 initCalendarApp();
             } else {
+                // ドライブのどこを探しても完全に無い場合だけ、新規作成する
                 createNewSpreadsheet();
             }
         })
-        .catch(err => showError("検索エラー: " + err));
+        .catch(err => showError("シート検索エラー: " + err));
     }
 
     function createNewSpreadsheet() {
-        showStatus("<div class='loading-spinner'></div> 新しいシートを作成中...");
+        showStatus("<div class='loading-spinner'></div> 新しいカレンダーデータベースを新規作成中...");
         fetch("https://sheets.googleapis.com/v4/spreadsheets", {
             method: "POST",
             headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -115,7 +124,6 @@
         .then(res => res.json())
         .then(data => {
             spreadsheetId = data.spreadsheetId;
-            localStorage.setItem("my_calendar_sheet_id", spreadsheetId); // 作ったIDを記憶
             fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`, {
                 method: "POST",
                 headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -127,7 +135,12 @@
     function initCalendarApp() {
         document.getElementById("setupScreen").style.display = "none";
         document.getElementById("mainApp").style.display = "flex";
+        
+        // カレンダーの枠組みを作る
         generateMayCalendar();
+        
+        // 【問題2解決】シートから過去のデータを読み込んで画面に復元する！
+        loadTasksFromSheet();
     }
 
     function generateMayCalendar() {
@@ -142,7 +155,10 @@
         div.className = isEmpty ? "calendar-day empty" : "calendar-day";
         if (!isEmpty) {
             div.innerHTML = `<span class="day-number">${day}</span>`;
-            div.dataset.date = `2026-05-${day.toString().padStart(2, '0')}`;
+            const formattedDate = `2026-05-${day.toString().padStart(2, '0')}`;
+            div.dataset.date = formattedDate;
+            div.id = `cell-${formattedDate}`; // 日付ごとの固有IDを持たせる
+            
             div.ondragover = (e) => { e.preventDefault(); div.classList.add("drag-over"); };
             div.ondragleave = () => div.classList.remove("drag-over");
             div.ondrop = (e) => {
@@ -150,16 +166,51 @@
                 div.classList.remove("drag-over");
                 const title = e.dataTransfer.getData("text/plain");
                 const elementId = e.dataTransfer.getData("elementId");
-                const pt = document.createElement("div");
-                pt.className = "placed-task";
-                pt.innerText = title;
-                div.appendChild(pt);
+                
+                renderPlacedTask(div.id, title);
+                
                 const oldEl = document.getElementById(elementId);
                 if(oldEl) oldEl.remove();
+                
                 saveTaskToSheet(div.dataset.date, title);
             };
         }
         return div;
+    }
+
+    // マスに予定の青いラベルを描画する共通関数
+    function renderPlacedTask(cellId, title) {
+        const cell = document.getElementById(cellId);
+        if (cell) {
+            const pt = document.createElement("div");
+            pt.className = "placed-task";
+            pt.innerText = title;
+            cell.appendChild(pt);
+        }
+    }
+
+    // --- 【問題2解決】スプレッドシートから過去データを読み込んでカレンダーにバラ撒く ---
+    function loadTasksFromSheet() {
+        console.log("シートから予定を読み込んでいます...");
+        fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A2:C100`, {
+            headers: { "Authorization": `Bearer ${accessToken}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.values && data.values.length > 0) {
+                data.values.forEach(row => {
+                    const date = row[1];  // B列: 日付 (例: 2026-05-15)
+                    const title = row[2]; // C列: タイトル
+                    
+                    if (date && title) {
+                        const cellId = `cell-${date}`;
+                        renderPlacedTask(cellId, title);
+                    }
+                });
+                console.log(`${data.values.length} 件の予定を復元しました！`);
+            }
+        })
+        .catch(err => console.error("データ読み込み失敗:", err));
     }
 
     function saveTaskToSheet(date, title) {

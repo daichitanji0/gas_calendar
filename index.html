@@ -70,47 +70,39 @@
     let spreadsheetId = null;
     const DB_FILE_NAME = "boccale-database";
 
-    // アプリ起動時の初期処理
-    async function init() {
-        console.log("App: 初期化開始");
-        
-        try {
-            // まずリダイレクト結果を確認（これが最優先）
-            const result = await auth.getRedirectResult();
-            if (result && result.credential) {
-                console.log("Firebase: リダイレクトから復帰、トークン取得成功");
-                accessToken = result.credential.accessToken;
-                localStorage.setItem("google_api_token", accessToken);
-            }
-        } catch (error) {
-            console.error("Firebase: リダイレクトエラー", error);
-        }
+    console.log("App: 初期化開始");
 
-        // ログイン状態の監視を開始
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                console.log("Firebase Auth: ログイン済み -", user.email);
-                showStatus("認証情報を確認中...");
-                
-                // トークンがあるか確認
-                accessToken = localStorage.getItem("google_api_token");
-                if (accessToken) {
-                    searchDriveForSpreadsheet();
-                } else {
-                    console.log("Firebase Auth: トークンがないため再取得を試みます");
-                    handleLogin();
-                }
+    // ログイン状態の監視
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            console.log("Firebase Auth: ログイン検知 -", user.email);
+            accessToken = localStorage.getItem("google_api_token");
+            if (accessToken) {
+                searchDriveForSpreadsheet();
             } else {
-                console.log("Firebase Auth: 未ログイン状態");
-                document.getElementById("setupScreen").style.display = "block";
-                document.getElementById("mainApp").style.display = "none";
+                console.warn("ログイン済みですがトークンがありません。再ログインが必要です。");
+                showStatus("認証をやり直してください。");
             }
-        });
-    }
+        } else {
+            console.log("Firebase Auth: 未ログイン状態");
+            document.getElementById("setupScreen").style.display = "block";
+            document.getElementById("mainApp").style.display = "none";
+        }
+    });
 
-    function handleLogin() {
-        console.log("Login: Googleリダイレクト開始");
-        auth.signInWithRedirect(provider);
+    // ログイン実行（ポップアップ方式に変更）
+    async function handleLogin() {
+        console.log("handleLogin: 実行されました");
+        try {
+            const result = await auth.signInWithPopup(provider);
+            console.log("Login Success: ポップアップログイン成功");
+            accessToken = result.credential.accessToken;
+            localStorage.setItem("google_api_token", accessToken);
+            // ログインに成功すると onAuthStateChanged が自動で発火します
+        } catch (error) {
+            console.error("Login Error:", error);
+            alert("ログインに失敗しました。\n理由: " + error.message + "\n\n※Firebaseコンソールの'承認済みドメイン'に現在のURLが含まれているか確認してください。");
+        }
     }
 
     function handleLogout() {
@@ -121,39 +113,34 @@
     }
 
     async function searchDriveForSpreadsheet() {
-        console.log("Drive API: スキャン開始...");
+        console.log("Drive API: 検索開始...");
         showStatus("ドライブをスキャン中...");
         const q = `name = '${DB_FILE_NAME}' and trashed = false and mimeType = 'application/vnd.google-apps.spreadsheet'`;
         const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name)`;
 
         try {
             const res = await fetch(url, { headers: { "Authorization": `Bearer ${accessToken}` } });
-            
             if (res.status === 401) {
-                console.warn("API: トークンが無効です。再ログインします。");
+                console.warn("トークンが無効です。");
                 handleLogin();
                 return;
             }
-
             const data = await res.json();
             if (data.files && data.files.length > 0) {
                 spreadsheetId = data.files[0].id;
-                console.log("API: シート発見 ID:", spreadsheetId);
+                console.log("シート発見:", spreadsheetId);
                 initCalendarApp();
             } else {
-                console.log("API: シートが見つかりません。作成ダイアログを表示します。");
-                if (confirm("専用スプレッドシートが見つかりません。作成しますか？")) {
+                if (confirm("専用スプレッドシートが見つかりません。新規作成しますか？")) {
                     createNewSpreadsheet();
                 }
             }
         } catch (e) {
-            console.error("API: 通信エラー", e);
-            showStatus("エラーが発生しました。");
+            console.error("Drive Search Error:", e);
         }
     }
 
     async function createNewSpreadsheet() {
-        console.log("Sheets API: 新規作成中...");
         try {
             const res = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
                 method: "POST",
@@ -162,15 +149,13 @@
             });
             const data = await res.json();
             spreadsheetId = data.spreadsheetId;
-            console.log("Sheets API: 作成完了 ID:", spreadsheetId);
             initCalendarApp();
         } catch (e) {
-            console.error("Sheets API: 作成エラー", e);
+            console.error("Create Sheet Error:", e);
         }
     }
 
     function initCalendarApp() {
-        console.log("App: カレンダー描画");
         document.getElementById("setupScreen").style.display = "none";
         document.getElementById("mainApp").style.display = "flex";
         generateCalendar();
@@ -257,9 +242,6 @@
         s.style.display = "block";
         s.innerText = m;
     }
-
-    // 実行
-    init();
 </script>
 </body>
 </html>

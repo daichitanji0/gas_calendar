@@ -70,18 +70,15 @@
     let spreadsheetId = null;
     const DB_FILE_NAME = "boccale-database";
 
-    console.log("App: 初期化開始");
-
-    // ログイン状態の監視
+    // 1. ログイン状態の監視
     auth.onAuthStateChanged((user) => {
         if (user) {
             console.log("Firebase Auth: ログイン検知 -", user.email);
             accessToken = localStorage.getItem("google_api_token");
+            
+            // トークンが既にあれば自動でアプリ起動
             if (accessToken) {
                 searchDriveForSpreadsheet();
-            } else {
-                console.warn("ログイン済みですがトークンがありません。再ログインが必要です。");
-                showStatus("認証をやり直してください。");
             }
         } else {
             console.log("Firebase Auth: 未ログイン状態");
@@ -90,41 +87,45 @@
         }
     });
 
-    // ログイン実行（ポップアップ方式に変更）
+    // 2. ログイン実行（成功時にそのままアプリを起動するフローへ）
     async function handleLogin() {
         console.log("handleLogin: 実行されました");
         try {
             const result = await auth.signInWithPopup(provider);
             console.log("Login Success: ポップアップログイン成功");
+            
+            // トークンを取得して保存
             accessToken = result.credential.accessToken;
             localStorage.setItem("google_api_token", accessToken);
-            // ログインに成功すると onAuthStateChanged が自動で発火します
+            
+            // 重要：ログイン直後にそのまま検索・起動へ進む
+            searchDriveForSpreadsheet();
+            
         } catch (error) {
             console.error("Login Error:", error);
-            alert("ログインに失敗しました。\n理由: " + error.message + "\n\n※Firebaseコンソールの'承認済みドメイン'に現在のURLが含まれているか確認してください。");
+            alert("ログインエラー: " + error.message);
         }
     }
 
-    function handleLogout() {
-        auth.signOut().then(() => {
-            localStorage.clear();
-            location.reload();
-        });
-    }
-
     async function searchDriveForSpreadsheet() {
+        // すでにアプリが起動していれば何もしない
+        if (document.getElementById("mainApp").style.display === "flex") return;
+        
         console.log("Drive API: 検索開始...");
         showStatus("ドライブをスキャン中...");
+        
         const q = `name = '${DB_FILE_NAME}' and trashed = false and mimeType = 'application/vnd.google-apps.spreadsheet'`;
         const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name)`;
 
         try {
             const res = await fetch(url, { headers: { "Authorization": `Bearer ${accessToken}` } });
+            
             if (res.status === 401) {
                 console.warn("トークンが無効です。");
                 handleLogin();
                 return;
             }
+            
             const data = await res.json();
             if (data.files && data.files.length > 0) {
                 spreadsheetId = data.files[0].id;
@@ -137,6 +138,7 @@
             }
         } catch (e) {
             console.error("Drive Search Error:", e);
+            showStatus("エラーが発生しました。");
         }
     }
 
@@ -165,6 +167,7 @@
     function generateCalendar() {
         const grid = document.getElementById("calendarGrid");
         grid.innerHTML = "<div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>";
+        // 2026年5月1日は金曜日なので、空セルを5つ追加
         for (let i = 0; i < 5; i++) grid.appendChild(createCell(true));
         for (let d = 1; d <= 31; d++) grid.appendChild(createCell(false, d));
     }
@@ -235,6 +238,13 @@
             ev.dataTransfer.setData("elementId", el.id);
         };
         document.getElementById("taskList").appendChild(el);
+    }
+
+    function handleLogout() {
+        auth.signOut().then(() => {
+            localStorage.clear();
+            location.reload();
+        });
     }
 
     function showStatus(m) {

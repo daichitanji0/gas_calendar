@@ -18,8 +18,35 @@
         .task-item { background: #e8f0fe; color: #1967d2; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-weight: bold; cursor: grab; border-left: 5px solid #4285F4; }
         .calendar-window { width: 66.66%; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; flex: 1; }
-        .calendar-day { background: #fdfefe; border: 1px solid #eef2f5; border-radius: 6px; padding: 8px; min-height: 90px; position: relative; }
-        .calendar-day.drag-over { background: #e8f0fe; border: 2px dashed #4285F4; }
+        .calendar-day {
+            background: #fdfefe;
+            border: 1px solid #333; /* 枠線を少しはっきりさせています */
+            /* 形の調整：右上、右下、左下を丸くし、左上だけ尖らせる */
+            border-radius: 0 15px 8px 8px; 
+            padding: 8px;
+            min-height: 100px;
+            position: relative;
+            /* 左上の「注ぎ口」を表現するために少し隙間をあける */
+            margin: 2px;
+            transition: all 0.2s;}
+
+/* 注ぎ口の部分を疑似要素で作る */
+        .calendar-day::before {
+            content: "";
+            position: absolute;
+            top: -1px;
+            left: -5px;
+            width: 10px;
+            height: 10px;
+            background: inherit;
+            border-left: 1px solid #333;
+            border-top: 1px solid #333;
+            /* 少し傾けて注ぎ口っぽくする */
+            transform: skewX(-20deg);
+            border-top-left-radius: 2px;}
+
+/* ドラッグした時の反応も形に合わせる */
+        .calendar-day.drag-over {background: #e8f0fe; border: 2px dashed #4285F4; transform: scale(1.02);}
         .placed-task { background: #4285F4; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-top: 4px; font-weight: bold; }
         .day-number { font-weight: bold; color: #555; }
         .empty { background: #f9fafb; border: none; }

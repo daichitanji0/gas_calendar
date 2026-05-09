@@ -23,6 +23,8 @@
         .placed-task { background: #4285F4; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-top: 4px; font-weight: bold; }
         .day-number { font-weight: bold; color: #555; }
         .empty { background: #f9fafb; border: none; }
+        .btn-secondary { background-color: #6c757d; margin-top: 10px; }
+        .btn-secondary:hover { background-color: #5a6268; }
     </style>
 </head>
 <body>
@@ -31,6 +33,10 @@
     <h2>boccale</h2>
     <p>Googleドライブと同期して、ログイン状態を維持します。</p>
     <button id="authBtn" class="btn" onclick="handleLogin()">Google でログイン</button>
+    <!-- Google でログインボタンの下に追加 -->
+    <br>
+    <button class="btn btn-secondary" onclick="startGuestMode()">アカウント無しでお試し</button>
+    
     <div id="statusArea" class="status-card"></div>
 </div>
 
@@ -69,9 +75,19 @@
     let accessToken = localStorage.getItem("google_api_token");
     let spreadsheetId = null;
     const DB_FILE_NAME = "boccale-database";
+    
+    let isGuestMode = false;
+
+    function startGuestMode() {
+        isGuestMode = true;
+        // お試し中であることがわかるようにタイトルを変更（任意）
+        document.getElementById("taskTitle").innerText = "未配置のタスク (お試し)";
+        initCalendarApp();
+    }
 
     // 1. ログイン状態の監視
     auth.onAuthStateChanged((user) => {
+        if (isGuestMode) return; // ゲストモードなら何もしない
         if (user) {
             console.log("Firebase Auth: ログイン検知 -", user.email);
             accessToken = localStorage.getItem("google_api_token");
@@ -233,6 +249,10 @@
     }
 
     function saveTask(date, title) {
+        if (isGuestMode) {
+            console.log("GuestMode: 保存をスキップしました");
+            return;
+        }
         fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`, {
             method: "POST",
             headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -256,6 +276,12 @@
     }
 
     function handleLogout() {
+        if (isGuestMode) {
+            if (confirm("お試しモードを終了しますか？（データは保存されません）")) {
+                location.reload();
+            }
+            return;
+        }
         auth.signOut().then(() => {
             localStorage.clear();
             location.reload();

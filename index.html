@@ -7,70 +7,153 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <style>
-        body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fb; color: #333; height: 100vh; }
-        .container { max-width: 600px; margin: 100px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; }
-        .btn { padding: 12px 24px; font-size: 16px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: background 0.2s; }
-        .btn:hover { background-color: #357ae8; }
+        /* 全体：Daichiさん指定の赤色を背景に */
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            background-color: rgb(223, 112, 121); 
+            color: #333; 
+            min-height: 100vh; 
+        }
+
+        /* セットアップ画面 */
+        .container { 
+            max-width: 600px; 
+            margin: 100px auto; 
+            background: white; 
+            padding: 40px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+            text-align: center; 
+        }
+
+        .btn { padding: 12px 24px; font-size: 16px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.2s; }
+        .btn:hover { background-color: #357ae8; transform: translateY(-1px); }
+        .btn-secondary { background-color: #6c757d; margin-top: 10px; }
+        
         .status-card { background: #e8f0fe; color: #1967d2; padding: 15px; border-radius: 6px; margin-top: 20px; font-weight: bold; display: none; }
-        #mainApp { display: none; height: 100vh; box-sizing: border-box; padding: 20px; gap: 20px; }
-        .task-window { width: 33.33%; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 20px; display: flex; flex-direction: column; box-sizing: border-box; }
+
+        /* メインアプリ：左右レイアウト */
+        #mainApp { 
+            display: none; 
+            min-height: 100vh; 
+            box-sizing: border-box; 
+            padding: 30px; 
+            gap: 30px; 
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 左側：タスクウィンドウ */
+        .task-window { 
+            width: 300px; 
+            background: rgba(255, 255, 255, 0.9); 
+            border-radius: 15px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            height: fit-content;
+        }
+
         .task-list { flex: 1; overflow-y: auto; padding: 10px 0; }
-        .task-item { background: #e8f0fe; color: #1967d2; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-weight: bold; cursor: grab; border-left: 5px solid #4285F4; }
-        .calendar-window { width: 66.66%; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; }
+        .task-item { background: white; color: #1967d2; padding: 12px; margin-bottom: 10px; border-radius: 8px; font-weight: bold; cursor: grab; border-left: 5px solid #4285F4; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        /* 右側：カレンダーウィンドウ */
+        .calendar-window { 
+            flex: 1; 
+            background: rgba(255, 255, 255, 0.15); /* 背景の赤を透かせる */
+            border-radius: 20px; 
+            padding: 30px; 
+            box-sizing: border-box; 
+            display: flex; 
+            flex-direction: column; 
+        }
+
+        #calendarTitle { font-size: 28px; font-weight: bold; text-align: center; margin-bottom: 25px; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        /* カレンダーグリッド：7列 */
         .calendar-grid {
-    background-color: rgb(223, 112, 121);
-    padding: 10px;
-    border-radius: 12px; /* 周囲を少し丸くすると馴染みます */
-}
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 15px;
+        }
+
+        /* 曜日見出し */
+        .weekday-label {
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+            padding-bottom: 10px;
+        }
+
+        /* ★Daichiさんのビーカー・マス目★ */
         .calendar-day {
-            background: #fff;
-            border: 1px solid #333; /* 枠線が不要なら消してもOK */
-            padding: 10px;
-            min-height: 100px;
+            background: white;
+            padding: 15px;
+            min-height: 110px;
             position: relative;
-            /* 作成したSVGをマスクとして適用 */
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.1); /* 立体感を出す影 */
+            transition: all 0.2s ease;
+
+            /* SVGマスクを適用（左上が尖ったビーカーの形） */
             -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 9 10"><path d="M -2 0 L 6 0 Q 7 0 7 1 L 7 9 Q 7 10 6 10 L 0 10 Q -1 10 -1 9 L -1 1 Q -1 0 -2 0" fill="black"/></svg>');
             mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 9 10"><path d="M -2 0 L 6 0 Q 7 0 7 1 L 7 9 Q 7 10 6 10 L 0 10 Q -1 10 -1 9 L -1 1 Q -1 0 -2 0" fill="black"/></svg>');
-            /* マスクのサイズ調整 */
             -webkit-mask-size: 100% 100%;
             mask-size: 100% 100%;
-            -webkit-mask-repeat: no-repeat;
-            mask-repeat: no-repeat;}
+            mask-repeat: no-repeat;
+        }
 
-/* ドラッグした時の反応も形に合わせる */
-        .calendar-day.drag-over {background: #e8f0fe; border: 2px dashed #4285F4; transform: scale(1.02);}
-        .placed-task { background: #4285F4; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-top: 4px; font-weight: bold; }
-        .day-number { font-weight: bold; color: #555; }
-        .empty { background: #f9fafb; border: none; }
-        .btn-secondary { background-color: #6c757d; margin-top: 10px; }
-        .btn-secondary:hover { background-color: #5a6268; }
+        .calendar-day:hover {
+            transform: scale(1.03);
+            box-shadow: 6px 6px 0px rgba(0,0,0,0.15);
+        }
+
+        .calendar-day.drag-over { background: #ffebee; transform: scale(1.05); }
+
+        .day-number { font-weight: bold; color: rgb(223, 112, 121); font-size: 1.2em; }
+        .empty { opacity: 0.2; pointer-events: none; }
+
+        /* 配置されたタスクの見た目 */
+        .placed-task { 
+            background: #4285F4; 
+            color: white; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 12px; 
+            margin-top: 8px; 
+            font-weight: bold; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
 
 <div id="setupScreen" class="container">
-    <h2>boccale</h2>
-    <p>Googleドライブと同期して、ログイン状態を維持します。</p>
+    <h1 style="color: rgb(223, 112, 121); font-size: 48px; margin-bottom: 10px;">boccale</h1>
+    <p>日々の余白を、安心に変えるカレンダー。</p>
     <button id="authBtn" class="btn" onclick="handleLogin()">Google でログイン</button>
-    <!-- Google でログインボタンの下に追加 -->
     <br>
     <button class="btn btn-secondary" onclick="startGuestMode()">アカウント無しでお試し</button>
-    
     <div id="statusArea" class="status-card"></div>
 </div>
 
 <div id="mainApp">
     <div class="task-window">
         <div style="display:flex; justify-content: space-between; align-items: center;">
-            <h3 id="taskTitle">未配置のタスク (+)</h3>
-            <button onclick="handleLogout()" style="cursor:pointer; font-size: 10px;">ログアウト</button>
+            <h3 id="taskTitle" style="margin:0;">未配置タスク</h3>
+            <button onclick="handleLogout()" style="cursor:pointer; font-size: 10px; border:none; background:none; color:#888;">ログアウト</button>
         </div>
-        <p style="font-size: 12px; color: #888; cursor:pointer;" onclick="addNewTaskPrompt(event)">クリックして追加 / ドラッグして配置</p>
+        <p style="font-size: 12px; color: #666; cursor:pointer; margin-top:15px; border: 1px dashed #ccc; padding: 10px; border-radius: 6px; text-align: center;" onclick="addNewTaskPrompt(event)">+ タスクを追加</p>
         <div class="task-list" id="taskList"></div>
     </div>
     <div class="calendar-window">
-        <div id="calendarTitle" style="font-size:24px; font-weight:bold; text-align:center; margin-bottom:20px;">2026年 5月</div>
-        <div class="calendar-grid" id="calendarGrid"></div>
+        <div id="calendarTitle">2026年 5月</div>
+        <div class="calendar-grid" id="calendarGrid">
+            <!-- 曜日はJSで再生成します -->
+        </div>
     </div>
 </div>
 
@@ -94,87 +177,53 @@
     let accessToken = localStorage.getItem("google_api_token");
     let spreadsheetId = null;
     const DB_FILE_NAME = "boccale-database";
-    
     let isGuestMode = false;
 
     function startGuestMode() {
         isGuestMode = true;
-        // お試し中であることがわかるようにタイトルを変更（任意）
-        document.getElementById("taskTitle").innerText = "未配置のタスク (お試し)";
+        document.getElementById("taskTitle").innerText = "お試しモード";
         initCalendarApp();
     }
 
-    // 1. ログイン状態の監視
     auth.onAuthStateChanged((user) => {
-        if (isGuestMode) return; // ゲストモードなら何もしない
+        if (isGuestMode) return;
         if (user) {
-            console.log("Firebase Auth: ログイン検知 -", user.email);
             accessToken = localStorage.getItem("google_api_token");
-            
-            // トークンが既にあれば自動でアプリ起動
-            if (accessToken) {
-                searchDriveForSpreadsheet();
-            }
+            if (accessToken) searchDriveForSpreadsheet();
         } else {
-            console.log("Firebase Auth: 未ログイン状態");
             document.getElementById("setupScreen").style.display = "block";
             document.getElementById("mainApp").style.display = "none";
         }
     });
 
-    // 2. ログイン実行（成功時にそのままアプリを起動するフローへ）
     async function handleLogin() {
-        console.log("handleLogin: 実行されました");
         try {
             const result = await auth.signInWithPopup(provider);
-            console.log("Login Success: ポップアップログイン成功");
-            
-            // トークンを取得して保存
             accessToken = result.credential.accessToken;
             localStorage.setItem("google_api_token", accessToken);
-            
-            // 重要：ログイン直後にそのまま検索・起動へ進む
             searchDriveForSpreadsheet();
-            
         } catch (error) {
-            console.error("Login Error:", error);
             alert("ログインエラー: " + error.message);
         }
     }
 
     async function searchDriveForSpreadsheet() {
-        // すでにアプリが起動していれば何もしない
         if (document.getElementById("mainApp").style.display === "flex") return;
-        
-        console.log("Drive API: 検索開始...");
         showStatus("ドライブをスキャン中...");
-        
         const q = `name = '${DB_FILE_NAME}' and trashed = false and mimeType = 'application/vnd.google-apps.spreadsheet'`;
         const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name)`;
 
         try {
             const res = await fetch(url, { headers: { "Authorization": `Bearer ${accessToken}` } });
-            
-            if (res.status === 401) {
-                console.warn("トークンが無効です。");
-                handleLogin();
-                return;
-            }
-            
+            if (res.status === 401) { handleLogin(); return; }
             const data = await res.json();
             if (data.files && data.files.length > 0) {
                 spreadsheetId = data.files[0].id;
-                console.log("シート発見:", spreadsheetId);
                 initCalendarApp();
             } else {
-                if (confirm("専用スプレッドシートが見つかりません。新規作成しますか？")) {
-                    createNewSpreadsheet();
-                }
+                if (confirm("専用スプレッドシートが見つかりません。新規作成しますか？")) createNewSpreadsheet();
             }
-        } catch (e) {
-            console.error("Drive Search Error:", e);
-            showStatus("エラーが発生しました。");
-        }
+        } catch (e) { showStatus("エラーが発生しました。"); }
     }
 
     async function createNewSpreadsheet() {
@@ -186,38 +235,29 @@
             });
             const data = await res.json();
             spreadsheetId = data.spreadsheetId;
-            
-           // 2. ヘッダーを書き込む (範囲を A1:C1 に限定し、シート名を省略して最初のシートをターゲットにする)
-            // values/A1:C1 と指定することで、デフォルトの第1シートに書き込みます
             const headerUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:C1?valueInputOption=USER_ENTERED`;
-            
             await fetch(headerUrl, {
-                method: "PUT", // 既存の空セルを上書きするのでPUT
+                method: "PUT",
                 headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    values: [["id", "date", "title"]] // ヘッダー行
-                })
+                body: JSON.stringify({ values: [["id", "date", "title"]] })
             });
-
-            console.log("スプレッドシートとヘッダーの作成が完了しました");
-            
             initCalendarApp();
-        } catch (e) {
-            console.error("Create Sheet Error:", e);
-        }
+        } catch (e) { console.error(e); }
     }
 
     function initCalendarApp() {
         document.getElementById("setupScreen").style.display = "none";
         document.getElementById("mainApp").style.display = "flex";
         generateCalendar();
-        loadTasks();
+        if (!isGuestMode) loadTasks();
     }
 
     function generateCalendar() {
         const grid = document.getElementById("calendarGrid");
-        grid.innerHTML = "<div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>";
-        // 2026年5月1日は金曜日なので、空セルを5つ追加
+        const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+        grid.innerHTML = weekdays.map(w => `<div class="weekday-label">${w}</div>`).join("");
+        
+        // 2026年5月1日は金曜日（空セル5つ）
         for (let i = 0; i < 5; i++) grid.appendChild(createCell(true));
         for (let d = 1; d <= 31; d++) grid.appendChild(createCell(false, d));
     }
@@ -268,10 +308,7 @@
     }
 
     function saveTask(date, title) {
-        if (isGuestMode) {
-            console.log("GuestMode: 保存をスキップしました");
-            return;
-        }
+        if (isGuestMode) return;
         fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`, {
             method: "POST",
             headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
@@ -280,7 +317,7 @@
     }
 
     function addNewTaskPrompt(e) {
-        const t = prompt("タスクを入力:");
+        const t = prompt("新しいタスクを入力してください:");
         if (!t) return;
         const el = document.createElement("div");
         el.className = "task-item";
@@ -295,16 +332,9 @@
     }
 
     function handleLogout() {
-        if (isGuestMode) {
-            if (confirm("お試しモードを終了しますか？（データは保存されません）")) {
-                location.reload();
-            }
-            return;
+        if (isGuestMode || confirm("ログアウトしますか？")) {
+            auth.signOut().then(() => { localStorage.clear(); location.reload(); });
         }
-        auth.signOut().then(() => {
-            localStorage.clear();
-            location.reload();
-        });
     }
 
     function showStatus(m) {

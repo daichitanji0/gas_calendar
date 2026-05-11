@@ -9,119 +9,82 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Nunito:wght@600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* 全体：画面いっぱいに広げ、スクロールを禁止 */
+        :root {
+            --beaker-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 9 10"><path d="M -2 0 L 6 0 Q 7 0 7 1 L 7 9 Q 7 10 6 10 L 0 10 Q -1 10 -1 9 L -1 1 Q -1 0 -2 0" fill="black"/></svg>');
+        }
+
         body { 
-            margin: 0; 
-            padding: 0; 
+            margin: 0; padding: 0; 
             font-family: 'Nunito', sans-serif; 
-            background-color: #2b2b2b; 
-            color: #333; 
-            height: 100vh; 
-            width: 100vw;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden; /* 全体のスクロールを防止 */
+            background-color: #2b2b2b; color: #333; 
+            height: 100vh; width: 100vw;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden; 
         }
 
-        /* ログイン画面 */
-        .container { 
-            max-width: 500px; 
-            background: white; 
-            padding: 40px; 
-            border-radius: 20px; 
-            text-align: center; 
-        }
+        #setupScreen { background: white; padding: 40px; border-radius: 20px; text-align: center; }
+        .btn { padding: 12px 24px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
-        /* メインアプリ：画面に収まるサイズに固定 */
         #mainApp { 
-            display: none; 
-            background-color: #c9e9ea; 
-            padding: 15px; 
-            border-radius: 25px; 
-            gap: 15px; 
-            width: 98vw;
-            height: 94vh; /* 上下に少し余白 */
-            box-sizing: border-box;
+            background-color: #c9e9ea; padding: 15px; border-radius: 25px; 
+            gap: 15px; width: 98vw; height: 94vh; box-sizing: border-box;
             box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-            flex-direction: row;
+            display: none; flex-direction: row;
         }
 
-        /* 左側：カレンダーエリア */
         .calendar-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
+            flex: 1; display: flex; flex-direction: column; height: 100%;
+            /* スクロールイベントをここで受け取るための設定 */
+            touch-action: none; 
         }
 
-        /* カレンダーヘッダー */
         .calendar-header {
-            display: flex;
-            align-items: flex-end;
-            margin-bottom: 10px;
-            padding: 8px 20px;
-            background-color: #f0fdfd;
-            border-radius: 15px;
-            height: 70px;
-            box-sizing: border-box;
-            -webkit-mask-image: radial-gradient(circle 20px at 0 0, transparent 20px, black 21px);
-            mask-image: radial-gradient(circle 20px at 0 0, transparent 20px, black 21px);
+            display: flex; align-items: flex-end; margin-bottom: 10px; padding: 8px 20px;
+            background-color: #f0fdfd; height: 70px; box-sizing: border-box;
+            -webkit-mask-box-image-source: var(--beaker-mask);
+            -webkit-mask-box-image-slice: 20% fill;
+            -webkit-mask-box-image-width: 15px;
+            -webkit-mask-box-image-repeat: stretch;
+            mask-border-source: var(--beaker-mask);
+            mask-border-slice: 20% fill;
+            mask-border-width: 15px;
+            mask-border-repeat: stretch;
         }
 
-        .month-number { font-size: 48px; font-weight: 700; line-height: 1; margin-right: 20px; }
+        .month-display { display: flex; flex-direction: column; align-items: flex-start; margin-right: 20px; }
+        .year-number { font-size: 14px; font-weight: 700; color: #888; line-height: 1; font-family: 'Nunito', sans-serif;}
+        .month-number { font-size: 48px; font-weight: 700; line-height: 0.9; font-family: 'Caveat', cursive;}
 
         .weekdays {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            flex: 1;
-            font-family: 'Caveat', cursive;
-            font-size: 24px;
-            text-align: center;
+            display: grid; grid-template-columns: repeat(7, 1fr); flex: 1;
+            font-family: 'Caveat', cursive; font-size: 24px; text-align: center;
         }
 
-        /* カレンダーグリッド：高さに合わせて自動調整 */
         .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: repeat(6, 1fr); /* 6行固定で高さを均等に */
-            gap: 8px;
-            flex: 1; /* 残りの高さをすべて使う */
+            display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, 1fr);
+            gap: 8px; flex: 1;
+            /* クニュっとアニメーションの起点 */
+            transform-origin: center center;
+            will-change: transform, opacity;
         }
 
         .calendar-day {
-    background: white;
-    padding: 5px 8px;
-    position: relative;
-    font-family: 'Caveat', cursive;
-    font-size: 18px;
-    font-weight: 700;
-    overflow: hidden;
+            padding: 5px 8px; position: relative;
+            font-family: 'Caveat', cursive; font-size: 18px; font-weight: 700;
+            overflow: hidden;
 
-    /* --- ここから修正 --- */
+            -webkit-mask-box-image-source: var(--beaker-mask);
+            -webkit-mask-box-image-slice: 20% fill;
+            -webkit-mask-box-image-width: 15px;
+            -webkit-mask-box-image-repeat: stretch;
+            mask-border-source: var(--beaker-mask);
+            mask-border-slice: 20% fill;
+            mask-border-width: 15px;
+            mask-border-repeat: stretch;
 
-    /* 1. マスクに使うSVGを指定 */
-    /* viewBoxに合わせて、少し余裕を持たせたパスにしています */
-    -webkit-mask-box-image-source: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 9 10"><path d="M -2 0 L 6 0 Q 7 0 7 1 L 7 9 Q 7 10 6 10 L 0 10 Q -1 10 -1 9 L -1 1 Q -1 0 -2 0" fill="black"/></svg>');
-    
-    /* 2. スライス設定：角のどれくらいを「変形させないエリア」にするか（数値は調整可） */
-    /* ここではSVGの単位に合わせて指定します */
-    -webkit-mask-box-image-slice: 20% fill; 
-    
-    /* 3. 実際の表示上の「角のサイズ」を固定（12pxのくぼみを維持したいならここを調整） */
-    -webkit-mask-box-image-width: 15px; 
-
-    /* 4. 辺の伸ばし方：直線部分を「引き伸ばす」設定 */
-    -webkit-mask-box-image-repeat: stretch;
-
-    /* Firefox等のための標準プロパティも併記 */
-    mask-border-source: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 9 10"><path d="M -2 0 L 6 0 Q 7 0 7 1 L 7 9 Q 7 10 6 10 L 0 10 Q -1 10 -1 9 L -1 1 Q -1 0 -2 0" fill="black"/></svg>');
-    mask-border-slice: 20% fill;
-    mask-border-width: 15px;
-    mask-border-repeat: stretch;
-    
-    /* 古い mask-image 設定は削除してください */
-}
+            /* 色がスムーズに溶けるアニメーション設定 */
+            transition: background-color 0.6s ease-in-out, color 0.6s ease-in-out;
+        }
 
         .day-prev { background-color: #a8ffff; color: #72d6d6; }
         .day-current { background-color: #ffffff; color: #444; }
@@ -129,205 +92,185 @@
         .color-sun { color: #ff5b5b !important; }
         .color-sat { color: #9c65ff !important; }
 
-        /* 右側：タスクサイドバー */
+        /* スクロール時の「クニュッ」と動くアニメーション */
+        @keyframes squishPrev {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            40% { transform: translateY(15px) scale(0.97); opacity: 0.6; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        @keyframes squishNext {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            40% { transform: translateY(-15px) scale(0.97); opacity: 0.6; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .anim-prev { animation: squishPrev 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
+        .anim-next { animation: squishNext 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
+
         .task-window { 
-            width: 260px; 
-            background: #ffffff; 
-            border-radius: 20px; 
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column;
-            height: 100%;
-            box-sizing: border-box;
-            -webkit-mask-image: radial-gradient(circle 15px at 0 0, transparent 15px, black 16px);
-            mask-image: radial-gradient(circle 15px at 0 0, transparent 15px, black 16px);
+            width: 260px; background: #ffffff; padding: 20px; display: flex; flex-direction: column; height: 100%; box-sizing: border-box;
+            -webkit-mask-box-image-source: var(--beaker-mask); -webkit-mask-box-image-slice: 20% fill; -webkit-mask-box-image-width: 15px; -webkit-mask-box-image-repeat: stretch;
+            mask-border-source: var(--beaker-mask); mask-border-slice: 20% fill; mask-border-width: 15px; mask-border-repeat: stretch;
         }
 
-        /* タスクリストのみスクロール可能にする */
-        .task-list { 
-            flex: 1; 
-            overflow-y: auto; 
-            margin-top: 10px;
-            padding-right: 5px;
-        }
-        /* スクロールバーの見た目を細く */
+        .task-list { flex: 1; overflow-y: auto; margin-top: 10px; padding-right: 5px; }
         .task-list::-webkit-scrollbar { width: 5px; }
         .task-list::-webkit-scrollbar-thumb { background: #c9e9ea; border-radius: 10px; }
 
-        .task-item { 
-            background: #f0fdfd; 
-            padding: 10px; 
-            margin-bottom: 8px; 
-            border-radius: 10px; 
-            font-size: 14px;
-            font-weight: bold; 
-            cursor: grab; 
-            border-left: 5px solid #4285F4;
-        }
-
-        .placed-task { 
-            background: #4285F4; 
-            color: white; 
-            padding: 2px 5px; 
-            border-radius: 4px; 
-            font-size: 10px; 
-            margin-top: 2px; 
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .add-task-btn {
-            font-size: 13px; color: #888; cursor:pointer; 
-            border: 2px dashed #eee; padding: 10px; border-radius: 10px; 
-            text-align: center; margin-top: 5px;
-        }
-
-        .btn { padding: 12px 24px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .task-item { background: #f0fdfd; padding: 10px; margin-bottom: 8px; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: grab; border-left: 5px solid #4285F4; }
+        .placed-task { background: #4285F4; color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'Nunito', sans-serif;}
+        .add-task-btn { font-size: 13px; color: #888; cursor:pointer; border: 2px dashed #eee; padding: 10px; border-radius: 10px; text-align: center; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-<div id="setupScreen" class="container">
+<div id="setupScreen">
     <h1 style="color: #444; font-size: 40px; margin-bottom: 10px; font-family: 'Caveat', cursive;">boccale</h1>
-    <p>日々の余白を、安心に変えるカレンダー。</p>
-    <button id="authBtn" class="btn" onclick="handleLogin()">Google でログイン</button>
-    <br><br>
-    <button style="background:#6c757d" class="btn" onclick="startGuestMode()">アカウント無しでお試し</button>
+    <button class="btn" onclick="startGuestMode()">アカウント無しでお試し</button>
 </div>
 
 <div id="mainApp">
-    <div class="calendar-section">
+    <div class="calendar-section" id="scrollArea">
         <div class="calendar-header">
-            <div class="month-number">5</div>
+            <div class="month-display">
+                <div class="year-number" id="currentYearLabel">2026</div>
+                <div class="month-number" id="currentMonthLabel">5</div>
+            </div>
             <div class="weekdays">
-                <div class="color-sun">sun</div>
-                <div>mon</div>
-                <div>tue</div>
-                <div>wed</div>
-                <div>thu</div>
-                <div>fri</div>
-                <div class="color-sat">sat</div>
+                <div class="color-sun">sun</div><div>mon</div><div>tue</div><div>wed</div><div>thu</div><div>fri</div><div class="color-sat">sat</div>
             </div>
         </div>
         <div class="calendar-grid" id="calendarGrid"></div>
     </div>
 
     <div class="task-window">
-        <div style="display:flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin:0; font-size: 18px;">TODO</h3>
-            <button onclick="handleLogout()" style="cursor:pointer; font-size: 10px; border:none; background:none; color:#bbb;">Logout</button>
-        </div>
+        <h3 style="margin:0; font-size: 18px;">TODO</h3>
         <div class="add-task-btn" onclick="addNewTaskPrompt()">+ Add Task</div>
         <div class="task-list" id="taskList"></div>
     </div>
 </div>
 
 <script>
-    // Firebaseの設定は変更なし
-    const firebaseConfig = {
-        apiKey: "AIzaSyCbyXSgnzkOGU8269J9f8axIkbC34vb_bQ",
-        authDomain: "my-calendar-app-495505.firebaseapp.com",
-        projectId: "my-calendar-app-495505",
-        storageBucket: "my-calendar-app-495505.firebasestorage.app",
-        messagingSenderId: "228515909111",
-        appId: "1:228515909111:web:9c05cb566cd021f178f2f2",
-        measurementId: "G-M5R8P4D22G"
-    };
+    // 基準となる表示月（初期値: 2026年5月）
+    let displayDate = new Date(2026, 4, 1); 
+    // 一時的にタスクを記憶するオブジェクト（月をまたいでも消えないように）
+    let tasksMap = {}; 
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/spreadsheets');
-    provider.addScope('https://www.googleapis.com/auth/drive.metadata.readonly');
-
-    let accessToken = localStorage.getItem("google_api_token");
-    let spreadsheetId = null;
-    let isGuestMode = false;
-
-    function startGuestMode() { isGuestMode = true; initCalendarApp(); }
-
-    auth.onAuthStateChanged((user) => {
-        if (isGuestMode) return;
-        if (user) {
-            accessToken = localStorage.getItem("google_api_token");
-            if (accessToken) searchDriveForSpreadsheet();
-        } else {
-            document.getElementById("setupScreen").style.display = "block";
-            document.getElementById("mainApp").style.display = "none";
-        }
-    });
-
-    async function handleLogin() {
-        const result = await auth.signInWithPopup(provider);
-        accessToken = result.credential.accessToken;
-        localStorage.setItem("google_api_token", accessToken);
-        searchDriveForSpreadsheet();
-    }
-
-    async function searchDriveForSpreadsheet() {
-        const q = `name = 'boccale-database' and trashed = false`;
-        const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`;
-        const res = await fetch(url, { headers: { "Authorization": `Bearer ${accessToken}` } });
-        const data = await res.json();
-        if (data.files && data.files.length > 0) {
-            spreadsheetId = data.files[0].id;
-            initCalendarApp();
-        } else {
-            // 新規作成ロジック（省略せず以前のものを継承）
-            initCalendarApp(); 
-        }
-    }
-
-    function initCalendarApp() {
+    function startGuestMode() { 
         document.getElementById("setupScreen").style.display = "none";
         document.getElementById("mainApp").style.display = "flex";
-        generateCalendar();
-        if (!isGuestMode) loadTasks();
+        initCalendarDOM();
+        updateCalendarUI(); 
     }
 
-    function generateCalendar() {
+    // 最初に42個の空のボックス（DOM）を作成
+    function initCalendarDOM() {
         const grid = document.getElementById("calendarGrid");
         grid.innerHTML = "";
-        const days = [
-            {d: 26, type: "day-prev color-sun"}, {d: 27, type: "day-prev"}, {d: 28, type: "day-prev"}, {d: 29, type: "day-prev"}, {d: 30, type: "day-prev"},
-            {d: 1, type: "day-current"}, {d: 2, type: "day-current color-sat"}, 
-            {d: 3, type: "day-current color-sun"}, {d: 4, type: "day-current"}, {d: 5, type: "day-current"}, {d: 6, type: "day-current"}, {d: 7, type: "day-current"}, {d: 8, type: "day-current"}, {d: 9, type: "day-current color-sat"},
-            {d: 10, type: "day-current color-sun"}, {d: 11, type: "day-current"}, {d: 12, type: "day-current"}, {d: 13, type: "day-current"}, {d: 14, type: "day-current"}, {d: 15, type: "day-current"}, {d: 16, type: "day-current color-sat"},
-            {d: 17, type: "day-current color-sun"}, {d: 18, type: "day-current"}, {d: 19, type: "day-current"}, {d: 20, type: "day-current"}, {d: 21, type: "day-current"}, {d: 22, type: "day-current"}, {d: 23, type: "day-current color-sat"},
-            {d: 24, type: "day-current color-sun"}, {d: 25, type: "day-current"}, {d: 26, type: "day-current"}, {d: 27, type: "day-current"}, {d: 28, type: "day-current"}, {d: 29, type: "day-current"}, {d: 30, type: "day-current color-sat"},
-            {d: 31, type: "day-current color-sun"},
-            {d: 1, type: "day-next"}, {d: 2, type: "day-next"}, {d: 3, type: "day-next"}, {d: 4, type: "day-next"}, {d: 5, type: "day-next"}, {d: 6, type: "day-next color-sat"}
-        ];
-        days.forEach(dayInfo => grid.appendChild(createCell(dayInfo)));
-    }
-
-    function createCell(info) {
-        const div = document.createElement("div");
-        div.className = `calendar-day ${info.type}`;
-        div.innerHTML = `<span>${info.d}</span>`;
-        if (info.type.includes("day-current")) {
-            const dateStr = `2026-05-${info.d.toString().padStart(2, '0')}`;
-            div.id = `cell-${dateStr}`;
+        for(let i=0; i<42; i++) {
+            const div = document.createElement("div");
             div.ondragover = (e) => e.preventDefault();
             div.ondrop = (e) => {
                 const title = e.dataTransfer.getData("text");
-                renderPlacedTask(div.id, title);
-                saveTask(dateStr, title);
+                if (!tasksMap[div.id]) tasksMap[div.id] = [];
+                tasksMap[div.id].push(title);
+                renderTaskOnCell(div, title);
             };
+            grid.appendChild(div);
         }
-        return div;
     }
 
-    function renderPlacedTask(cellId, title) {
-        const cell = document.getElementById(cellId);
-        if (cell) {
-            const el = document.createElement("div");
-            el.className = "placed-task";
-            el.innerText = title;
-            cell.appendChild(el);
+    // カレンダーの中身（日付・色）だけを更新する関数
+    function updateCalendarUI() {
+        const year = displayDate.getFullYear();
+        const month = displayDate.getMonth(); // 0~11
+
+        document.getElementById("currentYearLabel").innerText = year;
+        document.getElementById("currentMonthLabel").innerText = month + 1;
+
+        // 月の最初の日の曜日を取得して、カレンダーの開始日を逆算
+        const firstDay = new Date(year, month, 1);
+        const startOffset = firstDay.getDay(); 
+        const startDate = new Date(year, month, 1 - startOffset);
+
+        const cells = document.getElementById("calendarGrid").children;
+
+        for(let i=0; i<42; i++) {
+            const cellDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
+            const cellY = cellDate.getFullYear();
+            const cellM = cellDate.getMonth();
+            const cellD = cellDate.getDate();
+            const dayOfWeek = cellDate.getDay();
+
+            const cell = cells[i];
+            
+            // 日付をセットし、前のタスク表示をリセット
+            cell.innerHTML = `<span>${cellD}</span>`;
+            
+            // 一意のIDを付与（例: cell-2026-05-15）
+            cell.id = `cell-${cellY}-${String(cellM+1).padStart(2,'0')}-${String(cellD).padStart(2,'0')}`;
+
+            // CSSクラスの判定 (色分け)
+            let baseClass = "calendar-day";
+            if (cellY < year || (cellY === year && cellM < month)) {
+                baseClass += " day-prev"; // 前月（青）
+            } else if (cellY > year || (cellY === year && cellM > month)) {
+                baseClass += " day-next"; // 翌月（黄）
+            } else {
+                baseClass += " day-current"; // 当月（白）
+            }
+
+            if (dayOfWeek === 0) baseClass += " color-sun";
+            if (dayOfWeek === 6) baseClass += " color-sat";
+
+            // 新しいクラスを適用（ここでCSS Transitionにより色がフワッと変わる）
+            cell.className = baseClass;
+
+            // 保存されているタスクがあれば再描画
+            if (tasksMap[cell.id]) {
+                tasksMap[cell.id].forEach(title => renderTaskOnCell(cell, title));
+            }
         }
     }
+
+    function renderTaskOnCell(cellDom, title) {
+        const el = document.createElement("div");
+        el.className = "placed-task";
+        el.innerText = title;
+        cellDom.appendChild(el);
+    }
+
+    // スクロール（ホイール）イベントの制御
+    let isAnimating = false;
+    document.getElementById("scrollArea").addEventListener('wheel', (e) => {
+        if (isAnimating) return; // アニメーション中はスクロールを無視（止まらないように）
+        if (Math.abs(e.deltaY) < 30) return; // 軽いタッチは無視
+
+        isAnimating = true;
+        const grid = document.getElementById("calendarGrid");
+        
+        // スクロールの方向判定（上にスクロールで前月、下で翌月）
+        const direction = e.deltaY < 0 ? 'prev' : 'next';
+
+        // アニメーションのリセットと再発火
+        grid.classList.remove('anim-prev', 'anim-next');
+        void grid.offsetWidth; // リフローを強制
+        grid.classList.add(direction === 'prev' ? 'anim-prev' : 'anim-next');
+
+        // アニメーションが一番「沈み込んだ」タイミング（約200ms後）で中身を更新
+        setTimeout(() => {
+            if (direction === 'prev') {
+                displayDate.setMonth(displayDate.getMonth() - 1);
+            } else {
+                displayDate.setMonth(displayDate.getMonth() + 1);
+            }
+            updateCalendarUI();
+        }, 200);
+
+        // アニメーション完了後にロック解除
+        setTimeout(() => {
+            isAnimating = false;
+        }, 500);
+    });
 
     function addNewTaskPrompt() {
         const t = prompt("Task:");
@@ -339,10 +282,6 @@
         el.ondragstart = (ev) => ev.dataTransfer.setData("text", t);
         document.getElementById("taskList").appendChild(el);
     }
-
-    async function loadTasks() { /* 以前のスプレッドシート読み込みロジック */ }
-    function saveTask(date, title) { /* 以前のスプレッドシート保存ロジック */ }
-    function handleLogout() { localStorage.clear(); location.reload(); }
 </script>
 </body>
 </html>

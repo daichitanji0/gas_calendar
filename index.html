@@ -106,7 +106,7 @@
     
     /* 2. スライス設定：角のどれくらいを「変形させないエリア」にするか（数値は調整可） */
     /* ここではSVGの単位に合わせて指定します */
-    -webkit-mask-box-image-slice: 20%; 
+    -webkit-mask-box-image-slice: 20% fill; 
     
     /* 3. 実際の表示上の「角のサイズ」を固定（12pxのくぼみを維持したいならここを調整） */
     -webkit-mask-box-image-width: 15px; 
@@ -116,7 +116,7 @@
 
     /* Firefox等のための標準プロパティも併記 */
     mask-border-source: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 9 10"><path d="M -2 0 L 6 0 Q 7 0 7 1 L 7 9 Q 7 10 6 10 L 0 10 Q -1 10 -1 9 L -1 1 Q -1 0 -2 0" fill="black"/></svg>');
-    mask-border-slice: 20%;
+    mask-border-slice: 20% fill;
     mask-border-width: 15px;
     mask-border-repeat: stretch;
     

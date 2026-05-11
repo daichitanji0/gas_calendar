@@ -90,16 +90,38 @@
         }
 
         .calendar-day {
-            background: white;
-            padding: 5px 8px;
-            position: relative;
-            font-family: 'Caveat', cursive;
-            font-size: 18px;
-            font-weight: 700;
-            overflow: hidden; /* タスクがはみ出さないように */
-            -webkit-mask-image: radial-gradient(circle 12px at 0 0, transparent 12px, black 13px);
-            mask-image: radial-gradient(circle 12px at 0 0, transparent 12px, black 13px);
-        }
+    background: white;
+    padding: 5px 8px;
+    position: relative;
+    font-family: 'Caveat', cursive;
+    font-size: 18px;
+    font-weight: 700;
+    overflow: hidden;
+
+    /* --- ここから修正 --- */
+
+    /* 1. マスクに使うSVGを指定 */
+    /* viewBoxに合わせて、少し余裕を持たせたパスにしています */
+    -webkit-mask-box-image-source: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 9 10"><path d="M -2 0 L 6 0 Q 7 0 7 1 L 7 9 Q 7 10 6 10 L 0 10 Q -1 10 -1 9 L -1 1 Q -1 0 -2 0" fill="black"/></svg>');
+    
+    /* 2. スライス設定：角のどれくらいを「変形させないエリア」にするか（数値は調整可） */
+    /* ここではSVGの単位に合わせて指定します */
+    -webkit-mask-box-image-slice: 20%; 
+    
+    /* 3. 実際の表示上の「角のサイズ」を固定（12pxのくぼみを維持したいならここを調整） */
+    -webkit-mask-box-image-width: 15px; 
+
+    /* 4. 辺の伸ばし方：直線部分を「引き伸ばす」設定 */
+    -webkit-mask-box-image-repeat: stretch;
+
+    /* Firefox等のための標準プロパティも併記 */
+    mask-border-source: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 9 10"><path d="M -2 0 L 6 0 Q 7 0 7 1 L 7 9 Q 7 10 6 10 L 0 10 Q -1 10 -1 9 L -1 1 Q -1 0 -2 0" fill="black"/></svg>');
+    mask-border-slice: 20%;
+    mask-border-width: 15px;
+    mask-border-repeat: stretch;
+    
+    /* 古い mask-image 設定は削除してください */
+}
 
         .day-prev { background-color: #a8ffff; color: #72d6d6; }
         .day-current { background-color: #ffffff; color: #444; }

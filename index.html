@@ -11,149 +11,76 @@
         /* 全体設定 */
         body { 
             margin: 0; padding: 0; 
-            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
             background-color: #2b2b2b; color: #333; 
             height: 100vh; width: 100vw;
             display: flex; justify-content: center; align-items: center;
             overflow: hidden; 
         }
 
-        /* ログイン・セットアップ画面（以前のデザインを復元） */
         .container { 
-            max-width: 500px; 
-            background: white; 
-            padding: 40px; 
-            border-radius: 20px; 
-            text-align: center; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 500px; background: white; padding: 40px; border-radius: 20px; 
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
-        /* メインアプリのレイアウト */
         #mainApp { 
-            display: none; /* 初期状態は非表示 */
-            background-color: #c9e9ea; 
-            padding: 15px; 
-            border-radius: 25px; 
-            width: 98vw; height: 94vh; 
-            box-sizing: border-box;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-            display: flex;
-            gap: 15px;
+            display: none; background-color: #c9e9ea; padding: 15px; 
+            border-radius: 25px; width: 98vw; height: 94vh; box-sizing: border-box;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4); display: flex; gap: 15px;
         }
 
-        /* 左側：月表示 + サイドバー */
-        .left-column {
-            width: 80px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-
+        .left-column { width: 80px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
         .month-display {
-            height: 70px;
-            background-color: #f0fdfd;
-            border-radius: 15px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 36px;
-            font-weight: 800;
+            height: 70px; background-color: #f0fdfd; border-radius: 15px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 36px; font-weight: 800;
             -webkit-mask-image: radial-gradient(circle 15px at 0 0, transparent 15px, black 16px);
-            mask-image: radial-gradient(circle 15px at 0 0, transparent 15px, black 16px);
         }
 
-        .sidebar-left {
-            flex: 1;
-            background-color: #f0fdfd;
-            border-radius: 15px;
-            -webkit-mask-image: radial-gradient(circle 15px at 0 0, transparent 15px, black 16px);
-            mask-image: radial-gradient(circle 15px at 0 0, transparent 15px, black 16px);
-        }
+        .sidebar-left { flex: 1; background-color: #f0fdfd; border-radius: 15px; -webkit-mask-image: radial-gradient(circle 15px at 0 0, transparent 15px, black 16px); }
 
-        /* 中央：カレンダーエリア */
-        .calendar-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            min-width: 0;
-        }
-
+        .calendar-section { flex: 1; display: flex; flex-direction: column; height: 100%; min-width: 0; }
         .weekdays-header {
-            height: 70px;
-            background-color: #f0fdfd;
-            border-radius: 15px;
-            margin-bottom: 10px;
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            align-items: center;
-            text-align: center;
-            font-weight: bold;
-            font-size: 18px;
-            -webkit-mask-image: radial-gradient(circle 20px at 0 0, transparent 20px, black 21px);
-            mask-image: radial-gradient(circle 20px at 0 0, transparent 20px, black 21px);
+            height: 70px; background-color: #f0fdfd; border-radius: 15px; margin-bottom: 10px;
+            display: grid; grid-template-columns: repeat(7, 1fr); align-items: center; text-align: center;
+            font-weight: bold; font-size: 18px; -webkit-mask-image: radial-gradient(circle 20px at 0 0, transparent 20px, black 21px);
         }
 
         .calendar-viewport {
-            flex: 1;
-            overflow-y: scroll;
-            scroll-snap-type: y mandatory;
-            scrollbar-width: none;
-            display: flex;
-            flex-direction: column;
-            gap: 0px; 
+            flex: 1; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none;
+            display: flex; flex-direction: column; gap: 0px; 
         }
         .calendar-viewport::-webkit-scrollbar { display: none; }
 
         .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            display: grid; grid-template-columns: repeat(7, 1fr);
+            /* 6行固定にすることで月が替わってもガタつきを防止 */
             grid-template-rows: repeat(6, 1fr); 
-            gap: 4px;
-            height: 100%; 
-            min-height: 100%;
-            flex-shrink: 0;
-            scroll-snap-align: start;
-            padding: 2px;
-            box-sizing: border-box;
+            gap: 4px; height: 100%; min-height: 100%; flex-shrink: 0; scroll-snap-align: start; padding: 2px; box-sizing: border-box;
         }
 
         .calendar-day {
-            background: white;
-            padding: 8px;
-            font-size: 18px;
-            font-weight: 700;
-            transition: background-color 0.4s ease, color 0.4s ease;
-            position: relative;
+            background: white; padding: 8px; font-size: 18px; font-weight: 700;
+            transition: opacity 0.4s ease, background-color 0.4s ease;
+            position: relative; cursor: pointer;
             -webkit-mask-box-image-source: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 9 10"><path d="M -2 0 L 6 0 Q 7 0 7 1 L 7 9 Q 7 10 6 10 L 0 10 Q -1 10 -1 9 L -1 1 Q -1 0 -2 0" fill="black"/></svg>');
-            -webkit-mask-box-image-slice: 20% fill; 
-            -webkit-mask-box-image-width: 12px; 
-            -webkit-mask-box-image-repeat: stretch;
+            -webkit-mask-box-image-slice: 20% fill; -webkit-mask-box-image-width: 12px; -webkit-mask-box-image-repeat: stretch;
         }
 
-        .day-prev { background-color: #a8ffff; color: #5fbdbd; }
-        .day-current { background-color: #ffffff; color: #444; }
-        .day-next { background-color: #ffe89e; color: #d4b550; }
+        /* isCurrentMonth: false の時のスタイル */
+        .not-current-month { opacity: 0.4; }
+        
         .color-sun { color: #ff5b5b !important; }
         .color-sat { color: #6584ff !important; }
 
-        /* 右側：タスク */
         .task-window { 
             width: 240px; background: white; border-radius: 20px; padding: 20px;
             display: flex; flex-direction: column; height: 100%; box-sizing: border-box;
             -webkit-mask-image: radial-gradient(circle 15px at 0 0, transparent 15px, black 16px);
-            mask-image: radial-gradient(circle 15px at 0 0, transparent 15px, black 16px);
         }
         .task-list { flex: 1; overflow-y: auto; margin-top: 10px; }
-        .task-item { 
-            background: #f0fdfd; padding: 10px; margin-bottom: 8px; border-radius: 10px; 
-            font-size: 14px; font-weight: bold; cursor: grab; border-left: 5px solid #4285F4;
-        }
-        .add-task-btn {
-            font-size: 13px; color: #888; border: 2px dashed #eee; padding: 10px; 
-            border-radius: 10px; text-align: center; cursor: pointer;
-        }
+        .task-item { background: #f0fdfd; padding: 10px; margin-bottom: 8px; border-radius: 10px; font-size: 14px; font-weight: bold; border-left: 5px solid #4285F4; }
+        .add-task-btn { font-size: 13px; color: #888; border: 2px dashed #eee; padding: 10px; border-radius: 10px; text-align: center; cursor: pointer; }
         .btn { padding: 12px 24px; background-color: #4285F4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
@@ -162,22 +89,18 @@
 <div id="setupScreen" class="container">
     <h1 style="color: #444; font-size: 40px; margin-bottom: 10px; font-weight: bold;">boccale</h1>
     <p>日々の余白を、安心に変えるカレンダー。</p>
-    <button id="authBtn" class="btn" onclick="handleLogin()">Google でログイン</button>
-    <br><br>
-    <button style="background:#6c757d" class="btn" onclick="startGuestMode()">アカウント無しでお試し</button>
+    <button class="btn" onclick="startGuestMode()">お試し開始</button>
 </div>
 
-<div id="mainApp" style="display:none;">
+<div id="mainApp">
     <div class="left-column">
-        <div class="month-display" id="headerMonth">5</div>
+        <div class="month-display" id="headerMonth"></div>
         <div class="sidebar-left"></div>
     </div>
 
     <div class="calendar-section">
         <div class="weekdays-header">
-            <div class="color-sun">sun</div>
-            <div>mon</div><div>tue</div><div>wed</div><div>thu</div><div>fri</div>
-            <div class="color-sat">sat</div>
+            <div class="color-sun">sun</div><div>mon</div><div>tue</div><div>wed</div><div>thu</div><div>fri</div><div class="color-sat">sat</div>
         </div>
         <div class="calendar-viewport" id="calendarViewport">
             <div class="calendar-grid" id="grid-prev"></div>
@@ -187,107 +110,82 @@
     </div>
 
     <div class="task-window">
-        <div style="display:flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin:0; font-size: 18px;">TODO</h3>
-            <button onclick="handleLogout()" style="cursor:pointer; font-size: 10px; border:none; background:none; color:#bbb;">Logout</button>
-        </div>
+        <h3 style="margin:0; font-size: 18px;">TODO</h3>
         <div class="add-task-btn" onclick="addNewTaskPrompt()" style="margin-top:10px;">+ Add Task</div>
         <div class="task-list" id="taskList"></div>
     </div>
 </div>
 
 <script>
-    // Firebase初期設定
-    const firebaseConfig = {
-        apiKey: "AIzaSyCbyXSgnzkOGU8269J9f8axIkbC34vb_bQ",
-        authDomain: "my-calendar-app-495505.firebaseapp.com",
-        projectId: "my-calendar-app-495505",
-        storageBucket: "my-calendar-app-495505.firebasestorage.app",
-        messagingSenderId: "228515909111",
-        appId: "1:228515909111:web:9c05cb566cd021f178f2f2",
-        measurementId: "G-M5R8P4D22G"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const provider = new firebase.auth.GoogleAuthProvider();
-
-    let baseDate = new Date();
-    baseDate.setDate(1); 
+    let activeMonth = new Date(); // 基準となる月
+    activeMonth.setDate(1);
     let isResetting = false;
-    let isGuestMode = false;
-
-    // 認証状態の監視
-    auth.onAuthStateChanged((user) => {
-        if (isGuestMode) return;
-        if (user) {
-            startApp();
-        } else {
-            document.getElementById("setupScreen").style.display = "block";
-            document.getElementById("mainApp").style.display = "none";
-        }
-    });
-
-    async function handleLogin() {
-        await auth.signInWithPopup(provider);
-    }
-
-    function handleLogout() {
-        auth.signOut();
-        location.reload();
-    }
 
     function startGuestMode() {
-        isGuestMode = true;
-        startApp();
-    }
-
-    function startApp() {
         document.getElementById("setupScreen").style.display = "none";
         document.getElementById("mainApp").style.display = "flex";
         renderAll();
         setupScroll();
     }
 
-    function renderAll() {
-        const prev = new Date(baseDate.getFullYear(), baseDate.getMonth() - 1, 1);
-        const next = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 1);
+    // 日付配列を生成する関数
+    function generateDays(year, month) {
+        const days = [];
+        const firstDayOfMonth = new Date(year, month, 1);
+        const startDay = new Date(year, month, 1 - firstDayOfMonth.getDay()); // 週の開始日(日曜日)
 
-        renderGrid(prev, document.getElementById('grid-prev'));
-        renderGrid(baseDate, document.getElementById('grid-current'));
-        renderGrid(next, document.getElementById('grid-next'));
-
-        document.getElementById('headerMonth').innerText = baseDate.getMonth() + 1;
-        
-        const vp = document.getElementById('calendarViewport');
-        vp.scrollTop = vp.clientHeight; 
+        for (let i = 0; i < 42; i++) { // 6週分(7*6=42)
+            const date = new Date(startDay.getFullYear(), startDay.getMonth(), startDay.getDate() + i);
+            days.push({
+                date: date,
+                isCurrentMonth: date.getMonth() === month && date.getFullYear() === year
+            });
+        }
+        return days;
     }
 
     function renderGrid(targetDate, container) {
         container.innerHTML = "";
         const year = targetDate.getFullYear();
         const month = targetDate.getMonth();
-        const firstDay = new Date(year, month, 1).getDay();
-        const start = new Date(year, month, 1 - firstDay);
+        const daysArray = generateDays(year, month);
 
-        for (let i = 0; i < 42; i++) {
-            const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        daysArray.forEach(dayObj => {
+            const d = dayObj.date;
             const div = document.createElement("div");
             
-            let type = "day-current";
-            if (d.getMonth() < month && d.getFullYear() <= year || d.getFullYear() < year) type = "day-prev";
-            else if (d.getMonth() > month && d.getFullYear() >= year || d.getFullYear() > year) type = "day-next";
+            let className = "calendar-day";
+            if (!dayObj.isCurrentMonth) className += " not-current-month";
+            if (d.getDay() === 0) className += " color-sun";
+            if (d.getDay() === 6) className += " color-sat";
 
-            if (d.getDay() === 0) type += " color-sun";
-            if (d.getDay() === 6) type += " color-sat";
-
-            div.className = `calendar-day ${type}`;
+            div.className = className;
             div.innerHTML = `<span>${d.getDate()}</span>`;
             
-            const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            div.id = `cell-${dateStr}`;
+            // 薄い日付をクリックした際に月を切り替える
+            div.onclick = () => {
+                if (!dayObj.isCurrentMonth) {
+                    activeMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+                    renderAll();
+                }
+            };
+
             container.appendChild(div);
-        }
+        });
+    }
+
+    function renderAll() {
+        const prev = new Date(activeMonth.getFullYear(), activeMonth.getMonth() - 1, 1);
+        const next = new Date(activeMonth.getFullYear(), activeMonth.getMonth() + 1, 1);
+
+        renderGrid(prev, document.getElementById('grid-prev'));
+        renderGrid(activeMonth, document.getElementById('grid-current'));
+        renderGrid(next, document.getElementById('grid-next'));
+
+        document.getElementById('headerMonth').innerText = activeMonth.getMonth() + 1;
+        
+        const vp = document.getElementById('calendarViewport');
+        vp.scrollTop = vp.clientHeight; 
     }
 
     function setupScroll() {
@@ -297,17 +195,12 @@
 
             const h = vp.clientHeight;
             const y = vp.scrollTop;
-
             const page = Math.round(y / h);
-            let displayDate = new Date(baseDate);
-            if (page === 0) displayDate.setMonth(baseDate.getMonth() - 1);
-            else if (page === 2) displayDate.setMonth(baseDate.getMonth() + 1);
-            document.getElementById('headerMonth').innerText = displayDate.getMonth() + 1;
 
             if (y <= 2 || y >= vp.scrollHeight - h - 2) {
                 isResetting = true;
-                if (y <= 2) baseDate.setMonth(baseDate.getMonth() - 1);
-                else baseDate.setMonth(baseDate.getMonth() + 1);
+                if (y <= 2) activeMonth.setMonth(activeMonth.getMonth() - 1);
+                else activeMonth.setMonth(activeMonth.getMonth() + 1);
                 
                 renderAll();
                 setTimeout(() => { isResetting = false; }, 50);
@@ -321,8 +214,6 @@
         const el = document.createElement("div");
         el.className = "task-item";
         el.innerText = t;
-        el.draggable = true;
-        el.ondragstart = (e) => e.dataTransfer.setData("text", t);
         document.getElementById("taskList").appendChild(el);
     }
 </script>
